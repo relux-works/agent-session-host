@@ -1,0 +1,34 @@
+@startuml doorbell-delivery
+!include ../_includes/theme.puml
+
+title Doorbell: delivering a message into a hosted session
+
+participant "Tracked run\n(terminal hook)" as R $AGENT
+queue "Per-session inbox\n(manager state)" as I $PRIVATE
+participant "Notice pump\n(session host)" as Pump $SERVICE
+participant "Provider host" as H $SERVICE
+participant "Hosted primary session" as S $AGENT
+participant "Main loop" as M $SERVICE
+
+== Today ==
+R -> I: DeliverTerminal: one durable notice per terminal run
+Pump -> I: tick, or a nudge on attach
+alt running, host implements ProviderSessionNotifier, at least one client attached
+  Pump -> H: DeliverSessionNotice(coalesced text)
+  H -> S: bracketed paste (Claude) / app-server turn (Codex)
+else no client attached
+  Pump -> Pump: keep the notices queued
+  note right of Pump
+    replayed as one message
+    on the next attach
+  end note
+end
+
+== Target (requirement R4) ==
+M -> I: waggle message addressed to the session\n(request, wake)
+Pump -> H: deliver with or without an attached client,\naccording to the delivery policy
+H -> S: next turn, or interrupt
+S --> M: reports over waggle
+
+caption Sources: docs/claude-goal-runtime.md "In-session run notices"; internal/sessionmanager/manager_notice.go; spec §2.5, §5
+@enduml

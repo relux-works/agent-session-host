@@ -1,0 +1,40 @@
+@startuml restart-survival
+!include ../_includes/theme.puml
+
+title Surviving a host restart: today and target
+
+left to right direction
+
+rectangle "Today: pty backend" {
+  node "tb-sessiond" as D1 $SERVICE {
+    component "Claude PTY master" as P1 $AGENT
+  }
+  node "Codex app-server\n(separate process)" as A1 $AGENT
+  D1 --> A1 : app-server socket
+  note bottom of D1
+    A host restart closes the PTY master:
+    Claude sessions end and resume later
+    by --resume UUID.
+    Codex is re-adopted through thread/resume.
+  end note
+}
+
+rectangle "Target: tmux or ax backend" {
+  node "Session host" as D2 $SERVICE
+  node "Terminal holder\n(tmux server, or the ax terminal backend)" as T2 $SERVICE {
+    component "Claude PTY" as P2 $AGENT
+    component "Codex" as C2 $AGENT
+  }
+  D2 --> T2 : create, attach,\ninject, observe
+  note bottom of T2
+    Terminals outlive the host.
+    A restarted host re-adopts them.
+    People attach through the holder
+    (control or read-only).
+  end note
+}
+
+D1 -[hidden]-> D2
+
+caption Sources: docs/claude-goal-runtime.md "The daemon owns the PTY master"; docs/codex-goal-runtime.md; agent-session-manager-spec §1.3, §3, §4; spec §4, §7
+@enduml

@@ -4,4 +4,10 @@ The session host keeps long-lived agent sessions running in the background. It s
 
 Today this job is done by `tb-sessiond`, the Session Manager inside task-board (relux-works/skill-project-management). This repository is where the host becomes its own module: first extracted as it is, then extended for the main loop that starts and supervises the orchestrator of every process.
 
-Status: specification draft. See [`spec/session-host.md`](spec/session-host.md) and [`spec/track.md`](spec/track.md).
+Status: specification draft.
+
+| Document | Holds |
+| --- | --- |
+| [`spec/session-host.md`](spec/session-host.md) | the specification: today's implementation, phase 1 extraction, terminal backends, the main loop's requirements, park, restart survival |
+| [`spec/track.md`](spec/track.md) | milestones SH0-SH6, dependencies, risks |
+| [`diagrams/`](diagrams/README.md) | diagrams as code (PlantUML) and their renders |

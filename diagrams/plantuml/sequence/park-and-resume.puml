@@ -1,0 +1,36 @@
+@startuml park-and-resume
+!include ../_includes/theme.puml
+
+title Park and resume through the board goal (proposed)
+
+actor "Person or main loop" as P $PERSON
+participant "task-board session park" as K $SERVICE
+participant "Session host" as H $SERVICE
+participant "Orchestrator session" as S $AGENT
+database "Board" as B $COMMITTED
+
+== Park ==
+P -> K: park SES [--reason]
+K -> H: park directive
+H -> S: doorbell: write a park note
+S -> B: park note on the goal element:\nruns in flight, Change Requests awaiting\nreview or integration, pending decisions, next steps
+K -> B: new goal revision: same objective,\nhandoff_ref = the note
+K -> H: resumable stop (the goal is not cleared)
+H -> S: stop
+
+== Resume ==
+P -> H: start or wake\n(task-board claude, the main loop)
+H -> B: read the parent/primary head
+H -> S: /goal ... [rev N+1, handoff "<note>"] <condition>
+S -> B: read the park note first
+S -> S: continue the work
+
+== Emergency park (park --now) ==
+P -> K: park --now
+K -> B: kernel snapshot written as the note\n(no model involved)
+K -> S: optional short agent note, 30-second bound
+K -> K: stop runs in a resumable way (open question)
+K -> H: stop the session
+
+caption Sources: spec §6; pkg/board/board_goal_v2.go (BoardGoalRevision)
+@enduml

@@ -1,0 +1,36 @@
+@startuml session-start-today
+!include ../_includes/theme.puml
+
+title Starting a hosted primary session today (task-board claude)
+
+actor "Person" as P $PERSON
+participant "task-board claude\n(wrapper)" as W $SERVICE
+participant "tb-sessiond\n(one control plane per board)" as D $SERVICE
+participant "Claude provider host\n(PTY master held by tb-sessiond)" as H $SERVICE
+participant "Claude Code" as C $AGENT
+database "Board\n(board-goal-v2)" as B $COMMITTED
+
+P -> W: task-board claude
+W -> W: validate the launch plan,\nrun primary-session preparation
+W -> D: ConnectOrStart(board key)
+D -> D: is the parent/primary slot free?\n(one primary session per board)
+D -> H: Launch(provider launch request)
+H -> C: start in a PTY
+D -> B: read the parent/primary head
+D -> H: ApplyBoardGoal(revision)
+H -> C: /goal tbg-<token> [board goal <ID> rev <N> ...] <condition>
+C --> H: rendered acknowledgement of that revision
+H --> D: applied_goal_ref = head
+D --> W: attachment
+W <-> C: terminal, relayed through the daemon
+...
+P -> W: detach
+W --> P: anthropic-board resume SES-...
+note over C
+  keeps running without a client;
+  the native goal evaluator
+  drives continuation
+end note
+
+caption Sources: skill-project-management docs/claude-goal-runtime.md; internal/sessionmanager/host.go, claude_host.go, key.go
+@enduml
