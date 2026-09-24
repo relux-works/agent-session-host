@@ -19,8 +19,10 @@ diagrams/
 | Diagram | Kind | Source | Renders |
 | --- | --- | --- | --- |
 | Starting a hosted primary session today | PlantUML sequence | [session-start-today.puml](plantuml/sequence/session-start-today.puml) | [SVG](artefacts/plantuml/session-start-today.svg), [PNG](artefacts/plantuml/session-start-today.png) |
-| Doorbell: delivering a message into a hosted session | PlantUML sequence | [doorbell-delivery.puml](plantuml/sequence/doorbell-delivery.puml) | [SVG](artefacts/plantuml/doorbell-delivery.svg), [PNG](artefacts/plantuml/doorbell-delivery.png) |
+| Doorbell delivery modes: today and the three target modes | PlantUML sequence | [doorbell-delivery.puml](plantuml/sequence/doorbell-delivery.puml) | [SVG](artefacts/plantuml/doorbell-delivery.svg), [PNG](artefacts/plantuml/doorbell-delivery.png) |
+| One host per node with per-session holders | PlantUML deployment | [one-host-per-node.puml](plantuml/deployment/one-host-per-node.puml) | [SVG](artefacts/plantuml/one-host-per-node.svg), [PNG](artefacts/plantuml/one-host-per-node.png) |
 | Park and resume through the board goal | PlantUML sequence | [park-and-resume.puml](plantuml/sequence/park-and-resume.puml) | [SVG](artefacts/plantuml/park-and-resume.svg), [PNG](artefacts/plantuml/park-and-resume.png) |
+| Emergency stop (`task-board emergency-stop`, `estop`) | PlantUML sequence | [emergency-stop.puml](plantuml/sequence/emergency-stop.puml) | [SVG](artefacts/plantuml/emergency-stop.svg), [PNG](artefacts/plantuml/emergency-stop.png) |
 | Surviving a host restart: today and target | PlantUML deployment | [restart-survival.puml](plantuml/deployment/restart-survival.puml) | [SVG](artefacts/plantuml/restart-survival.svg), [PNG](artefacts/plantuml/restart-survival.png) |
 
 ## Tools

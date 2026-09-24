@@ -1,0 +1,37 @@
+@startuml emergency-stop
+!include ../_includes/theme.puml
+
+title Emergency stop: task-board emergency-stop (estop), proposed
+
+actor "Operator" as P $PERSON
+participant "task-board emergency-stop" as E $SERVICE
+participant "task-board kernel\n(task-board's own code,\nno model)" as K $SERVICE
+participant "Session host" as H $SERVICE
+participant "Orchestrator sessions" as S $AGENT
+participant "Runs" as R $AGENT
+database "Boards" as B $COMMITTED
+
+P -> E: estop [--process NAME]
+E -> P: lists every session and run it will stop;\n"type STOP to continue"
+P -> E: STOP
+note right of E
+  refused from inside a hosted
+  session or a run (operator only)
+end note
+E -> K: snapshot every affected board
+K -> B: runs in flight, Change Requests awaiting\nreview or integration, obligations, unrouted notices
+E -> H: interrupt: write a short note (10-30 s, default 20)
+H -> S: interrupt, then the note request
+S -> B: optional short note
+E -> R: stop in a resumable way (open question)
+E -> H: resumable stop of every affected session
+H -> S: stop (goals are kept)
+E -> B: goal revision per board:\nhandoff_ref = snapshot + note
+E -> P: report: stopped, not stopped
+
+== Later ==
+P -> H: keeper up
+H -> S: resume with the goal and its handoff note
+
+caption Sources: spec §9, §11
+@enduml

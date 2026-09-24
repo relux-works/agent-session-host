@@ -8,6 +8,6 @@ Status: specification draft.
 
 | Document | Holds |
 | --- | --- |
-| [`spec/session-host.md`](spec/session-host.md) | the specification: today's implementation, phase 1 extraction, terminal backends, the main loop's requirements, park, restart survival |
-| [`spec/track.md`](spec/track.md) | milestones SH0-SH6, dependencies, risks |
+| [`spec/session-host.md`](spec/session-host.md) | the specification: today's implementation, phase 1 extraction, the main loop's requirements, one host per node, access security, doorbell modes, park, emergency stop, compaction, reboot restore, the attach picker, terminal backends, restart survival |
+| [`spec/track.md`](spec/track.md) | milestones SH0-SH7, dependencies, risks |
 | [`diagrams/`](diagrams/README.md) | diagrams as code (PlantUML) and their renders |

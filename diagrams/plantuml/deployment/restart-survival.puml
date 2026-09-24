@@ -19,9 +19,9 @@ rectangle "Today: pty backend" {
   end note
 }
 
-rectangle "Target: tmux or ax backend" {
+rectangle "Target: per-session holders (pty holder, tmux or ax)" {
   node "Session host" as D2 $SERVICE
-  node "Terminal holder\n(tmux server, or the ax terminal backend)" as T2 $SERVICE {
+  node "Per-session terminal holders\n(pty holder process, tmux pane, or ax)" as T2 $SERVICE {
     component "Claude PTY" as P2 $AGENT
     component "Codex" as C2 $AGENT
   }
@@ -36,5 +36,5 @@ rectangle "Target: tmux or ax backend" {
 
 D1 -[hidden]-> D2
 
-caption Sources: docs/claude-goal-runtime.md "The daemon owns the PTY master"; docs/codex-goal-runtime.md; agent-session-manager-spec §1.3, §3, §4; spec §4, §7
+caption Sources: docs/claude-goal-runtime.md "The daemon owns the PTY master"; docs/codex-goal-runtime.md; agent-session-manager-spec §1.3, §3, §4; spec §5, §13, §14
 @enduml

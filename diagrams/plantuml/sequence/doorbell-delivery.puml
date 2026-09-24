@@ -1,34 +1,40 @@
 @startuml doorbell-delivery
 !include ../_includes/theme.puml
 
-title Doorbell: delivering a message into a hosted session
+title Doorbell delivery modes
 
-participant "Tracked run\n(terminal hook)" as R $AGENT
-queue "Per-session inbox\n(manager state)" as I $PRIVATE
-participant "Notice pump\n(session host)" as Pump $SERVICE
-participant "Provider host" as H $SERVICE
-participant "Hosted primary session" as S $AGENT
-participant "Main loop" as M $SERVICE
+participant "Sender\n(terminal hook, main loop,\nwaggle message)" as R $AGENT
+queue "Per-session inbox\n(host state)" as I $PRIVATE
+participant "Doorbell router\n(session host)" as Pump $SERVICE
+participant "Provider host\n(adapter)" as H $SERVICE
+participant "Hosted session" as S $AGENT
 
-== Today ==
-R -> I: DeliverTerminal: one durable notice per terminal run
+== Today (fact) ==
+R -> I: one durable notice per terminal run
 Pump -> I: tick, or a nudge on attach
-alt running, host implements ProviderSessionNotifier, at least one client attached
-  Pump -> H: DeliverSessionNotice(coalesced text)
-  H -> S: bracketed paste (Claude) / app-server turn (Codex)
+alt at least one client attached
+  Pump -> H: deliver the coalesced text
+  H -> S: Claude: bracketed paste\nCodex: turn/start (idle) or turn/steer (active)
 else no client attached
-  Pump -> Pump: keep the notices queued
-  note right of Pump
-    replayed as one message
-    on the next attach
-  end note
+  Pump -> Pump: keep the notices queued\nuntil the next attach
 end
 
-== Target (requirement R4) ==
-M -> I: waggle message addressed to the session\n(request, wake)
-Pump -> H: deliver with or without an attached client,\naccording to the delivery policy
-H -> S: next turn, or interrupt
-S --> M: reports over waggle
+== Target (proposed, spec §7) ==
+R -> I: message with a mode
+Pump -> I: deliver whether or not a client is attached;\ncoalesce waiting messages
+alt next_turn (default)
+  Pump -> H: next_turn
+  H -> S: idle: a new turn at once\nbusy: at the next turn boundary
+else steer (where the harness supports it)
+  Pump -> H: steer
+  H -> S: Codex: turn/steer into the exact in-progress turn\nClaude: paste at a safe point, else next_turn
+else interrupt (halt, park, emergency stop only)
+  Pump -> H: interrupt
+  H -> S: stop the running turn\n(Codex turn/interrupt; Claude interrupt key)
+  H -> S: then deliver the message
+end
+H --> Pump: event: delivered, turn started
+Pump --> R: event stream (main loop, waggle)
 
-caption Sources: docs/claude-goal-runtime.md "In-session run notices"; internal/sessionmanager/manager_notice.go; spec §2.5, §5
+caption Sources: docs/claude-goal-runtime.md; internal/sessionmanager/manager_notice.go, codex_host.go, codex_context.go; waggle §10; spec §2.5, §7
 @enduml

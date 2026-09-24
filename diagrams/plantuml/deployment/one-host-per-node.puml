@@ -1,0 +1,54 @@
+@startuml one-host-per-node
+!include ../_includes/theme.puml
+
+title One host per node with per-session holders (proposed)
+
+actor "Operator" as OP $PERSON
+
+node "Node (one OS user)" {
+  component "Session host\nsupervisor, registry, doorbell router,\naccess control, event stream" as HOST $SERVICE
+  file "Control socket\n0600 in a 0700 directory\npeer credentials checked" as SOCK $PRIVATE
+
+  rectangle "Main loop" as ML {
+    component "Holder" as H0 $SERVICE
+    component "Main loop session\n(capability: registered root sessions)" as S0 $AGENT
+  }
+  rectangle "Process A" as PA {
+    component "Holder" as H1 $SERVICE
+    component "Root session A\n(capability: its own subtree)" as S1 $AGENT
+    component "Holder" as H1b $SERVICE
+    component "Owner-run session\n(sub-orchestrator)" as S1b $AGENT
+    database "Board A" as B1 $COMMITTED
+  }
+  rectangle "Process B" as PB {
+    component "Holder" as H2 $SERVICE
+    component "Root session B" as S2 $AGENT
+    database "Board B" as B2 $COMMITTED
+  }
+}
+
+OP --> SOCK : keeper attach, park, stop, estop\n(operator authority)
+S0 --> SOCK : wake, park\n(capability token)
+SOCK --> HOST
+HOST --> H0 : private holder channel\n(secret via inherited fd)
+HOST --> H1
+HOST --> H1b
+HOST --> H2
+H0 --> S0 : owns the terminal
+H1 --> S1 : owns the terminal
+H1b --> S1b : owns the terminal
+H2 --> S2 : owns the terminal
+S1 --> B1 : writes
+S1b --> B1 : writes its leased subtree
+S2 --> B2 : writes
+
+note right of HOST
+  Restarting or upgrading the host
+  leaves every holder running;
+  the new host re-adopts them.
+  One registry serves attach,
+  doorbells, supervision and recovery.
+end note
+
+caption Sources: spec §5, §6; today: one daemon per board (spec §2.1, §2.8)
+@enduml
