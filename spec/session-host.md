@@ -1,6 +1,6 @@
 # Session host: specification
 
-Status: **DRAFT v0.1**, 2026-09-25. Not normative. Track: [`track.md`](track.md). Diagrams: [`../diagrams/`](../diagrams/README.md). Changes from v0 are listed in §17.
+Status: **DRAFT v0.2**, 2026-09-25. Not normative. Track: [`track.md`](track.md). Diagrams: [`../diagrams/`](../diagrams/README.md). Change logs: §17 (v0 → v0.1) and §18 (v0.1 → v0.2).
 
 A long-lived orchestrator needs something to keep it running when nobody is looking. That program:
 
@@ -32,7 +32,8 @@ Sources of facts:
 
 Related specifications:
 
-- the process-configuration specification (relux-works/curator-playbook): one root orchestrator per process, the board goal, and the trust component that decides who counts as a person;
+- the process-configuration specification (relux-works/curator-playbook): one root orchestrator per process and the board goal;
+- the trust specification (relux-works/curator-trust `spec/trust.md`): who counts as a person, presence-bound confirmations, and running agents under an operating-system account of their own;
 - the main-loop specification (relux-works/curator-keeper);
 - waggle (relux-works/waggle): the doorbell's delivery modes and the carrier of messages between orchestrators;
 - Agent Session Manager (`ax`, relux-works/agent-session-manager).
@@ -64,12 +65,12 @@ People read about the system in the Apiary names. Specifications, code, command 
   - a supervision matrix;
   - operator commands backed by the operator's own authority.
 
-  *proposed*
+  *proposed; closing access is the first refactor after the as-is extraction, decided (2026-09-25)*
 - **Doorbell modes.** `next_turn` is the default. `steer` puts the message into the running turn where the harness can take it. `interrupt` is only for halt, park and emergency stop. Delivery no longer waits for an attached client. *proposed*
 - **Park and emergency stop.** `task-board session park` is the orderly stop: the orchestrator writes a note, the note is bound into the board goal, and the next start resumes from it. `task-board emergency-stop` (alias `estop`) is a separate, unmistakable command for when there is no time. *park decided (2026-09-24); emergency stop proposed*
 - **A session is a cache.** The goal, the handoff note and the board carry the work across compaction and restarts. Adapters report context and limits so that a handoff is written before compaction. *proposed, not the first priority*
 - **One entry point after a reboot.** `keeper up`, started at login, brings the host, the main loop and every root orchestrator back. *proposed*
-- **Attach picker.** `keeper attach` with no target lists every session and attaches to the chosen one. *proposed*
+- **Conversation and watch.** `keeper` alone opens the main loop's session. `keeper chat` with no target lists every session and opens a conversation with the chosen one; `keeper watch` only looks. Underneath all three is the host's attach operation, in control or read-only mode. *proposed; the command names are the operator's (2026-09-25)*
 - **Later: pluggable terminal backends.** `pty`, `tmux` and `ax`, behind a transport abstraction. *decided to record (2026-09-24); the design is proposed*
 
 ## 1. Terms
@@ -223,7 +224,7 @@ The main loop starts and supervises the root orchestrator of every process on it
    - it runs in the background with no client attached;
    - the launch is composed by `curator run` (Decision 0021) and handed to the host.
 2. **R2. One root session per process.** Exactly one root session is started from outside for each process. Today's singular `parent/primary` slot already enforces this per board (§2.2). Sub-orchestrators and runs are spawned by the root session inside its own board; the main loop never starts them.
-3. **R3. Attach.** A person can attach to root sessions and to owner-run sub-orchestrators, in control mode or read-only mode (§12). Attaching to short-lived worker runs is optional; their transcripts suffice.
+3. **R3. Attach.** A person can attach to root sessions and to owner-run sub-orchestrators, in control mode (`keeper chat`) or read-only mode (`keeper watch`) (§12). Attaching to short-lived worker runs is optional; their transcripts suffice.
 4. **R4. Doorbell for detached sessions.** Notices and main-loop messages reach a running session that has no client attached, through the delivery modes of §7.
 5. **R5. Supervision.** The main loop can wake, park and stop root sessions within the matrix of §6.3. The operator can always stop a session.
 6. **R6. Events.** The host emits a stream that the main loop and waggle consume:
@@ -267,6 +268,8 @@ Phase 1 keeps one daemon per board. The node host is a later milestone (track SH
 
 Today one token controls everything, and every agent can read it (§2.8). The target closes the socket, identifies callers and gives each session only the powers it needs.
 
+*Order (decided 2026-09-25).* Phase 1 extracts the host as it is, token and all. Closing access, as described in this section, is the first refactor after that extraction.
+
 ### 6.1 The socket
 
 - The control socket is created inside a directory of mode 0700 that the host creates before it listens. The socket itself is mode 0600. This closes the window between `listen` and `chmod` of §2.8.
@@ -281,7 +284,7 @@ Every agent runs as the operator's UID, so a UID check cannot tell sessions apar
 - **The main loop's token** covers the root sessions of the processes registered with it. It covers nothing inside them.
 - **Operator commands** need the operator's authority: attaching with control, stopping any session, parking any session, and emergency stop.
   - Until the trust component exists, the operator's authority is a CLI act outside any hosted session or run. The host checks that the caller carries no session token and that its process is not a descendant of a hosted session. This is a guardrail, as the process-configuration specification calls unsigned human acts.
-  - From the trust component on, it is a presence-bound confirmation: the companion app, or the operating system's user authentication (curator-playbook, trust specification).
+  - From the trust component on, it is a presence-bound confirmation: the companion app, or the operating system's user authentication (relux-works/curator-trust `spec/trust.md`).
 - **Every accepted request is logged** with the token's session, the act and its target.
 
 ### 6.3 The supervision matrix
@@ -334,6 +337,18 @@ Per adapter:
 - **waggle needs an amendment.** Its §10 still lets messages wait while no client is attached. The detached delivery of this section needs that sentence to change (track dependency).
 
 ![Doorbell delivery modes](../diagrams/artefacts/plantuml/doorbell-delivery.svg)
+
+### 7.1 Harness-specific mechanisms inside adapters *(proposed)*
+
+An adapter may use a harness's own extension mechanism where it makes the contract more reliable. That stays an implementation detail of the adapter; the contract of §3.3 and the modes above do not change.
+
+- **Example: Claude Mods.** Claude Code plugins with function hooks: a TypeScript module (`hooks/register.ts` in an ordinary plugin directory) registers handlers that wrap engine events and interface rendering, like middleware. In the local CLI they are enabled by `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`. They are in early access, and their API may change between releases without notice.
+- **What the Claude adapter could use them for:**
+  - reliable message delivery, instead of typing into the terminal;
+  - context telemetry for §10;
+  - panels that show the board and the goal inside the harness.
+- **Never for authority.** Authorization must not depend on a mod that can be removed or disabled, and their own guidance says so. Supervision, capability tokens and confirmations stay in the host and the trust component (§6).
+- **Not a dependency now.** It is early access and Claude-only. The PTY paths of the table above remain the implementation.
 
 ## 8. Park *(decided 2026-09-24; the mechanics proposed)*
 
@@ -402,18 +417,22 @@ What it does, in order:
 - **A report** tells the person what came back, what started fresh and what failed.
 - **`keeper down`** parks every session in order before a planned shutdown.
 
-## 12. Attach and the picker *(proposed)*
+## 12. Conversation, watch and the picker *(proposed)*
 
-- **`keeper attach` with no target** opens a small terminal UI over the host's registry. It lists every hosted session with:
+The person uses three commands of the main loop; underneath each is the host's attach operation.
+
+- **`keeper`** with no arguments opens the main loop's session, starting the node first when it is down.
+- **`keeper chat` with no target** opens a small terminal UI over the host's registry. It lists every hosted session with:
   - its process and role: main loop, root orchestrator or sub-orchestrator;
   - its harness;
   - its state and attached clients;
   - its last activity.
 
-  The person picks one and chooses control or read-only.
-- **`keeper attach <process>`** goes straight to that process's root session.
+  The person picks one and opens a conversation with it (control mode) or a read-only view.
+- **`keeper chat <process>`** goes straight to that process's root session.
+- **`keeper watch <target>`** opens a read-only view of any session: the main loop, a root session or a sub-orchestrator.
 - **Harness differences stay in the adapters.** Claude reattaches to its PTY or resumes by UUID; Codex re-adopts its thread. The person sees one behaviour.
-- **Attach is for people only** (§6.3). Read-only attach sends no input to the session. Control attach needs the operator's authority.
+- **Attach is for people only** (§6.3). A read-only view sends no input to the session. Control needs the operator's authority.
 
 ## 13. Terminal backends and transport *(recorded for later; proposed)*
 
@@ -456,7 +475,7 @@ The terms follow `ax` §4.A, where a backend "owns exactly one host-local Termin
 
 1. **One host per node** (§5): does the operator adopt it, and in which milestone does the per-board daemon retire?
 2. **Bridge shape.** How the `ax start --launch-plan` bridge is built: an `ax` shim, or the daemon answering `ax start` (Decision 0021 open question 1). How it retires when `ax` ships.
-3. **Claude's `steer` and `interrupt`.** Verify the safe points and the interrupt key per harness version (§7). Decide which message classes may use `steer`.
+3. **Claude's `steer` and `interrupt`.** Verify the safe points and the interrupt key per harness version (§7). Decide which message classes may use `steer`. Decide whether the Claude adapter uses Claude Mods once their API is stable (§7.1).
 4. **Signed supervision.** The main loop's certificate and the waggle `cmd` classes from CM2 (§6.3).
 5. **Resumable suspension of runs.** Needed by emergency stop (§9).
 6. **`handoff_ref`.** A field on the goal revision, or text in the objective. Who consumes it, and when it is cleared.
@@ -477,6 +496,8 @@ The terms follow `ax` §4.A, where a backend "owns exactly one host-local Termin
 | 2026-09-25 | The Apiary names map to technical terms as in "Names used in this specification"; specifications open with that map. |
 | 2026-09-25 | Park writes its note into the board goal, so the next start picks it up with the goal. The emergency stop must be unmistakable. Its form, `task-board emergency-stop` / `estop` (§9), is the author's proposal. |
 | 2026-09-25 | Delivery must be autonomous and stable; the three modes of §7 are the author's proposal. Sessions must survive compaction; the handoff before compaction and the watchdog (§10) are designed now and built later. |
+| 2026-09-25 | Closing access to the host (§6) is the first refactor after the as-is extraction. |
+| 2026-09-25 | The person's commands are `keeper`, `keeper chat` and `keeper watch`; `attach` remains the host's operation underneath. |
 
 ## 17. Change log: v0 → v0.1
 
@@ -501,3 +522,15 @@ The terms follow `ax` §4.A, where a backend "owns exactly one host-local Termin
 - **Diagrams:**
   - new: "One host per node with per-session holders" and "Emergency stop";
   - updated: "Doorbell delivery modes", "Park and resume" (the emergency part moved out) and "Surviving a host restart" (per-session holders).
+
+## 18. Change log: v0.1 → v0.2
+
+- **Added:**
+  - §7.1, harness-specific mechanisms inside adapters, with Claude Mods as the example: reliable delivery, context telemetry and panels in the Claude adapter, never for authority, not a dependency now;
+  - the order of work in §6: closing access is the first refactor after the as-is extraction (decided);
+  - the trust specification's new home, relux-works/curator-trust.
+- **Changed:**
+  - the person's commands: `keeper`, `keeper chat` and `keeper watch` replace `keeper attach` in §0, R3 and §12; `attach` stays the host's operation;
+  - §16 gains the two decisions of 2026-09-25;
+  - open question 3 covers Claude Mods.
+- **Diagrams:** "One host per node" names the new commands.
