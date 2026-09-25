@@ -377,7 +377,7 @@ For a stop that cannot wait, for example power about to fail, there is a separat
 
 - **The command:** `task-board emergency-stop`, alias `estop`, with `keeper estop` as the main loop's front for the whole node.
 - **A loud confirmation.** The command prints what it is about to stop: every hosted session and every run on the node, or of one process with `--process <name>`. It then asks the person to type `STOP`. Non-interactive callers, the companion app later, pass `--confirm=STOP`.
-- **Operator only.** A caller inside a hosted session or a run is refused (§6.3).
+- **Operator, or the main loop under a delegation.** The operator may always run it. The main loop may trigger it only under a delegation that names the trigger (for example exhausted limits or a detected runaway); root orchestrators, sub-orchestrators and runs are refused (§6.3). *decided 2026-09-25*
 
 What it does, in order:
 
