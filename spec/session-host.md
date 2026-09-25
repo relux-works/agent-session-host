@@ -292,7 +292,7 @@ Every agent runs as the operator's UID, so a UID check cannot tell sessions apar
 | Actor | Wake | Park | Stop | Read events and transcripts | Attach | Emergency stop |
 | --- | --- | --- | --- | --- | --- | --- |
 | the operator (a person) | every session | every session | every session | every session | every session, control or read-only | yes |
-| the main loop's session | root sessions of registered processes | root sessions of registered processes | only with the operator's confirmation or a delegation that covers it | registered processes' root sessions | never | no |
+| the main loop's session | root sessions of registered processes | root sessions of registered processes | only with the operator's confirmation or a delegation that covers it | registered processes' root sessions | never | only under a delegation that names the trigger |
 | a root session | its own subtree | its own subtree | its own subtree | its own subtree | never | no |
 | an owner-run session | its own spawned runs | its own spawned runs | its own spawned runs | its own spawned runs | never | no |
 | a worker run | nothing | nothing | nothing | itself | never | no |
