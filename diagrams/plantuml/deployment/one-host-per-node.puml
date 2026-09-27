@@ -27,7 +27,7 @@ node "Node (one OS user)" {
   }
 }
 
-OP --> SOCK : keeper chat, watch, park, stop, estop\n(operator authority)
+OP --> SOCK : keeper chat, watch, park, stop, estop\nover curator session (operator authority)
 S0 --> SOCK : wake, park\n(capability token)
 SOCK --> HOST
 HOST --> H0 : private holder channel\n(secret via inherited fd)

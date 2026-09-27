@@ -1,6 +1,6 @@
 # Session host: specification
 
-Status: **DRAFT v0.2**, 2026-09-25. Not normative. Track: [`track.md`](track.md). Diagrams: [`../diagrams/`](../diagrams/README.md). Change logs: §17 (v0 → v0.1) and §18 (v0.1 → v0.2).
+Status: **DRAFT v0.3**, 2026-09-27. Not normative. Track: [`track.md`](track.md). Diagrams: [`../diagrams/`](../diagrams/README.md). Command-line shape: relux-works/wiki `research/cli-shaping-review.md`, adopted 2026-09-27. Change logs: §17 (v0 → v0.1), §18 (v0.1 → v0.2) and §19 (v0.2 → v0.3).
 
 A long-lived orchestrator needs something to keep it running when nobody is looking. That program:
 
@@ -40,7 +40,7 @@ Related specifications:
 
 ## Names used in this specification *(decided 2026-09-25)*
 
-People read about the system in the Apiary names. Specifications, code, command lines and board items use technical terms. This is the map; the rest of this document uses the technical terms.
+People read about the system in the Apiary names. Beekeeping words appear only where people type them in the apiary: the `keeper` command and its nouns (`keeper hive …`), the apiary's directories and the profile name `apiary`. Specifications, code, the host's and the kernel's command lines, flags, configuration keys and board items use technical terms; the same rule stands in the main-loop specification (Names) and in the process-configuration specification §16 *(decided 2026-09-27)*. This is the map; the rest of this document uses the technical terms.
 
 | Apiary name | Technical term | What it is |
 | --- | --- | --- |
@@ -67,10 +67,11 @@ People read about the system in the Apiary names. Specifications, code, command 
 
   *proposed; closing access is the first refactor after the as-is extraction, decided (2026-09-25)*
 - **Doorbell modes.** `next_turn` is the default. `steer` puts the message into the running turn where the harness can take it. `interrupt` is only for halt, park and emergency stop. Delivery no longer waits for an attached client. *proposed*
-- **Park and emergency stop.** `task-board session park` is the orderly stop: the orchestrator writes a note, the note is bound into the board goal, and the next start resumes from it. `task-board emergency-stop` (alias `estop`) is a separate, unmistakable command for when there is no time. *park decided (2026-09-24); emergency stop proposed*
+- **Park and emergency stop.** Park is the orderly stop: the orchestrator writes a note, the note is bound into the board goal, and the next start resumes from it. The host's `curator session park` does it, and `keeper park` fronts it. The emergency stop is a separate, unmistakable command for when there is no time: `keeper estop [<hive>]`, over the host's `curator session estop`. The kernel adds only a snapshot, `task-board board snapshot`, and no kernel command parks or stops a session or the node. *park decided (2026-09-24); the commands decided (2026-09-27); the emergency stop's mechanics proposed*
+- **Its command line.** The host is a Curator provider, `curator-session`, so people and tools reach it as `curator session list|show|status|attach|watch|park|stop|estop|logs|doctor|restart`, and keeper fronts it (§12.1). `task-board session` stays an alias for one release after the node host lands, and its context-registry commands move to `task-board context`. Phase 1 changes no command. *decided (2026-09-27)*
 - **A session is a cache.** The goal, the handoff note and the board carry the work across compaction and restarts. Adapters report context and limits so that a handoff is written before compaction. *proposed, not the first priority*
 - **One entry point after a reboot.** `keeper up`, started at login, brings the host, the main loop and every root orchestrator back. *proposed*
-- **Conversation and watch.** `keeper` alone opens the main loop's session. `keeper chat` with no target lists every session and opens a conversation with the chosen one; `keeper watch` only looks. Underneath all three is the host's attach operation, in control or read-only mode. *proposed; the command names are the operator's (2026-09-25)*
+- **Conversation and watch.** `keeper` alone opens the main loop's session. `keeper chat` with no target lists every session and opens a conversation with the chosen one; `keeper watch` only looks. Underneath all three are the host's `curator session attach`, in control mode, and `curator session watch`, read-only. *proposed; the command names are the operator's (2026-09-25)*
 - **Later: pluggable terminal backends.** `pty`, `tmux` and `ax`, behind a transport abstraction. *decided to record (2026-09-24); the design is proposed*
 
 ## 1. Terms
@@ -89,6 +90,7 @@ People read about the system in the Apiary names. Specifications, code, command 
 | capability token | a secret the host issues to one session, naming what that session may do (§6) |
 | kernel | task-board's own code, the deterministic part of the board with no model involved. "The kernel writes a snapshot" means task-board writes it |
 | main loop | the node's master orchestrator (main-loop specification) |
+| `curator session` | the host's command line: the Curator provider `curator-session`, which `curator session …` dispatches to and `keeper` fronts (§12.1) |
 
 ## 2. Today's implementation *(fact)*
 
@@ -187,7 +189,7 @@ The first step moves code, not behaviour. Improvements come after the module sta
 
 - The board and its goal ledger (`board-goal-v2`): what the goal is, who may write it, and when it counts as achieved.
 - Routing, the spawn runtime, run manifests, acceptance and handoff evidence.
-- The `task-board claude|codex`, `session` and `spawn` commands. They keep their names and behaviour and reach the module through a thin seam: task-board supplies the goal revision to apply, and consumes the host's acknowledgements, events and notices.
+- The `task-board claude|codex`, `session` and `spawn` commands. They keep their names and behaviour and reach the module through a thin seam: task-board supplies the goal revision to apply, and consumes the host's acknowledgements, events and notices. Their later names are in §12.1.
 
 ### 3.3 The contract
 
@@ -354,6 +356,8 @@ An adapter may use a harness's own extension mechanism where it makes the contra
 
 Park is the orderly stop. It leaves a clear entry point for the next start.
 
+`curator session park <session>` starts it; `keeper park` and `keeper down` front it for the person and the main loop (§12.1). *decided 2026-09-27; `task-board session park` is withdrawn*
+
 1. The host rings the session's doorbell with a park directive, in `interrupt` mode.
 2. The orchestrator writes a park note as a resource of the goal's element. The note lists:
    - runs in flight;
@@ -361,13 +365,15 @@ Park is the orderly stop. It leaves a clear entry point for the next start.
    - decisions waiting for a person;
    - the next steps;
    - pointers to anything else needed.
-3. task-board appends a goal revision with the same objective and condition and a new `handoff_ref` field naming the note. The field is an addition to `BoardGoalRevision` (§2.4). Nothing else about the goal changes.
+3. The host asks the kernel, and task-board appends a goal revision with the same objective and condition and a new `handoff_ref` field naming the note. The field is an addition to `BoardGoalRevision` (§2.4). Nothing else about the goal changes.
 4. The host stops the session through the resumable stop. The goal is not cleared (§2.2).
-5. On the next start the native goal payload carries the reference, for example `[board goal <ID> rev <N+1> ... handoff "<note>"]`. The start may be `task-board claude|codex`, the main loop's wake, or `keeper up` (§11). The session reads the note first, and the native evaluator continues from there (§2.4).
+5. On the next start the native goal payload carries the reference, for example `[board goal <ID> rev <N+1> ... handoff "<note>"]`. The start may be `curator run`, or its alias `task-board claude|codex`, the main loop's wake, or `keeper up` (§11). The session reads the note first, and the native evaluator continues from there (§2.4).
 
 If the orchestrator does not write the note within a bound, the kernel snapshot of §9 becomes the note.
 
 The same mechanism writes a handoff without stopping, before compaction (§10).
+
+**Runs park by directive.** A run, whether a sub-orchestrator in its owner-run session or a worker, is a board record the kernel tracks, so it parks through the kernel: `task-board spawn directive <RUN> park`, a new directive kind beside `cancel` and `pause_after_checkpoint`. For an owner-run session the host carries it out as in steps 1–4. A root session parks its sub-orchestrators this way, and the person does through `keeper park <hive>/<RUN-ID>`. *decided 2026-09-27; the directive's semantics proposed*
 
 ![Park and resume](../diagrams/artefacts/plantuml/park-and-resume.svg)
 
@@ -375,20 +381,20 @@ The same mechanism writes a handoff without stopping, before compaction (§10).
 
 For a stop that cannot wait, for example power about to fail, there is a separate command. It is not a flag on park, so that nobody runs it by accident and everybody who reads it knows what it is.
 
-- **The command:** `task-board emergency-stop`, alias `estop`, with `keeper estop` as the main loop's front for the whole node.
-- **A loud confirmation.** The command prints what it is about to stop: every hosted session and every run on the node, or of one process with `--process <name>`. It then asks the person to type `STOP`. Non-interactive callers, the companion app later, pass `--confirm=STOP`.
+- **One command for people:** `keeper estop [<hive>]`, for the whole node or for one process. Underneath is the host's `curator session estop [<process>]`. No kernel command spells an emergency stop, because it acts on sessions and on the node, which the kernel does not own; the kernel contributes the snapshot, `task-board board snapshot`. *decided 2026-09-27; `task-board emergency-stop` and its alias `estop` are withdrawn*
+- **A loud confirmation.** The command prints what it is about to stop: every hosted session and every run on the node, or of one process. It then asks for the phrase `EMERGENCY STOP` and the operator's presence: the operating system's user authentication on the node, or the companion app's presence-bound signature (main-loop specification §10.3; relux-works/curator-trust). No flag replaces the phrase, and the kernel's `--confirm` stays a plain acknowledgement of a destructive act.
 - **Operator, or the main loop under a delegation.** The operator may always run it. The main loop may trigger it only under a delegation that names the trigger (for example exhausted limits or a detected runaway); root orchestrators, sub-orchestrators and runs are refused (§6.3). *decided 2026-09-25*
 
 What it does, in order:
 
-1. **The kernel writes a snapshot for every affected board.** The kernel is task-board's own code, not a model. It records:
+1. **The kernel writes a snapshot for every affected board:** the host runs `task-board board snapshot` on each. The kernel is task-board's own code, not a model. It records:
    - the runs in flight and their states;
    - Change Requests awaiting review or integration;
    - the output of `task-board worktree obligations`;
    - unrouted notices.
 2. **Each orchestrator may add a short note** within a bound of 10 to 30 seconds (default 20). A missing note does not delay anything.
 3. **Runs are stopped** so that they can resume. Today a run is cancelled, not suspended, so a resumable suspension is open question 5.
-4. **Sessions are stopped** through the resumable stop. Each goal gets a revision whose `handoff_ref` names the snapshot and the note, as in §8.
+4. **Sessions are stopped** through the resumable stop. Each goal gets a revision whose `handoff_ref` names the snapshot and the note, appended by the kernel as in §8.
 5. **The command reports** what it stopped and what it could not stop.
 
 `keeper up` (§11) brings everything back from those notes.
@@ -419,7 +425,7 @@ What it does, in order:
 
 ## 12. Conversation, watch and the picker *(proposed)*
 
-The person uses three commands of the main loop; underneath each is the host's attach operation.
+The person uses three commands of the main loop; underneath each is the host's attach operation, `curator session attach` in control mode or `curator session watch` read-only.
 
 - **`keeper`** with no arguments opens the main loop's session, starting the node first when it is down.
 - **`keeper chat` with no target** opens a small terminal UI over the host's registry. It lists every hosted session with:
@@ -429,10 +435,33 @@ The person uses three commands of the main loop; underneath each is the host's a
   - its last activity.
 
   The person picks one and opens a conversation with it (control mode) or a read-only view.
-- **`keeper chat <process>`** goes straight to that process's root session.
+- **`keeper chat <hive>`** goes straight to that process's root session.
+- **`keeper session list`**, alias `keeper ls`, prints the same registry without opening anything (`curator session list`).
 - **`keeper watch <target>`** opens a read-only view of any session: the main loop, a root session or a sub-orchestrator.
 - **Harness differences stay in the adapters.** Claude reattaches to its PTY or resumes by UUID; Codex re-adopts its thread. The person sees one behaviour.
 - **Attach is for people only** (§6.3). A read-only view sends no input to the session. Control needs the operator's authority.
+
+### 12.1 The command line *(decided 2026-09-27; the table's details proposed)*
+
+`curator <noun>` dispatches to an executable named `curator-<noun>` on one of Curator's trust roots. The host's command line is therefore the provider `curator-session`, which ships beside `curator` as a first-party provider, or is installed with `curator provider install session` (curator-spec issue #100, curator issue #96).
+
+| Command | Does | The person's front |
+| --- | --- | --- |
+| `curator session list`, `curator session show <session>` | the registry (§5): every hosted session, or one, with its process, role, runtime, state, attached clients and last activity | `keeper session list` (alias `keeper ls`); the `keeper chat` picker |
+| `curator session status` | the host's own health: its instance, socket, holders and startup reconciliation | `keeper host status` |
+| `curator session attach <session>` | attach in control mode; needs the operator's authority (§6.2) | `keeper`, `keeper chat` |
+| `curator session watch <session>` | a read-only view | `keeper watch` |
+| `curator session park <session>` | park (§8) | `keeper park`, `keeper down` |
+| `curator session stop <session>` | the resumable stop; no goal is cleared | `keeper stop` |
+| `curator session estop [<process>]` | the emergency stop (§9) | `keeper estop [<hive>]` |
+| `curator session logs [-f]`, `doctor`, `restart [--stop-hosted]` | the host's log, its checks and its replacement (§2.7) | `keeper host logs\|doctor\|restart` |
+
+- **The kernel keeps what writes board records:** the goal revisions with `handoff_ref` (§8), the snapshot `task-board board snapshot` (§9) and the run directive kind `park` (§8). No kernel command parks or stops a hosted session or the node.
+- **Migration.** Phase 1 changes no command (§3.5). From the node host (track SH3) on:
+  - `curator session …` is the host's command line, and `task-board session …` stays an alias of it for one release;
+  - the four context-registry commands under `task-board session` (`context-completeness`, `context-economics`, `reclaim-contexts`, `sweep-contexts`) are not host operations, so they move to `task-board context` (`list`, `show`, `economics`, `gc`) instead of leaving with the host;
+  - `task-board claude|codex` are already aliases of `curator run claude|codex` by curator-spec Decision 0021 §5; `--resume <uuid>`, which adopts a foreign native session, becomes `--adopt <uuid>`; the detach hint prints the canonical command, and the `anthropic-board` and `openai-board` launchers retire.
+- **Runtime ids.** Every command names a harness by its runtime id (`claude`, `codex`, `muse`, `pi`, or a binding id), the same values `curator run` and `task-board spawn --runtime` take.
 
 ## 13. Terminal backends and transport *(recorded for later; proposed)*
 
@@ -484,7 +513,8 @@ The terms follow `ax` §4.A, where a backend "owns exactly one host-local Termin
 9. **Context telemetry.** Which fields each harness version exposes, and the thresholds for an early handoff (§10).
 10. **Placement of the extracted code.** Which task-board packages move and which stay, and the repository's module path.
 11. **The real boundary.** Running agents under an operating-system account separate from the operator's, and how the host launches them there. This is shared with the trust specification (§6.4).
-12. **Emergency stop scope.** Whether `--process` is enough, or a board-level scope is also needed. How the companion app confirms an emergency stop from the phone.
+12. **Emergency stop scope.** Whether a process is enough as the scope of `curator session estop`, or a board-level scope is also needed. How the companion app confirms an emergency stop from the phone.
+13. **An emergency stop under a delegation.** How the main loop presents a delegation that names the trigger to `curator session estop` in place of the phrase and the person's presence (§9, §6.3).
 
 ## 16. Decisions
 
@@ -492,12 +522,15 @@ The terms follow `ax` §4.A, where a backend "owns exactly one host-local Termin
 | --- | --- |
 | 2026-09-24 | The session host becomes its own module in this private repository. Phase 1 extracts it as it is, with no behaviour change, and is a priority. |
 | 2026-09-24 | Pluggable terminal backends (`pty`, `tmux`, `ax`) are recorded as the architecture; none is built in phase 1. |
-| 2026-09-24 | `task-board session park` is adopted; an emergency park is to be considered. |
+| 2026-09-24 | `task-board session park` is adopted; an emergency park is to be considered. *Its name is superseded on 2026-09-27: `curator session park`.* |
 | 2026-09-25 | The Apiary names map to technical terms as in "Names used in this specification"; specifications open with that map. |
-| 2026-09-25 | Park writes its note into the board goal, so the next start picks it up with the goal. The emergency stop must be unmistakable. Its form, `task-board emergency-stop` / `estop` (§9), is the author's proposal. |
+| 2026-09-25 | Park writes its note into the board goal, so the next start picks it up with the goal. The emergency stop must be unmistakable. Its form, `task-board emergency-stop` / `estop` (§9), is the author's proposal. *The form is superseded on 2026-09-27: `keeper estop [<hive>]` over `curator session estop`.* |
 | 2026-09-25 | Delivery must be autonomous and stable; the three modes of §7 are the author's proposal. Sessions must survive compaction; the handoff before compaction and the watchdog (§10) are designed now and built later. |
 | 2026-09-25 | Closing access to the host (§6) is the first refactor after the as-is extraction. |
 | 2026-09-25 | The person's commands are `keeper`, `keeper chat` and `keeper watch`; `attach` remains the host's operation underneath. |
+| 2026-09-27 | The command-line shape is adopted (relux-works/wiki `research/cli-shaping-review.md`). The host's command line is the Curator provider `curator session …`, fronted by keeper; `task-board session` stays an alias for one release after the node host lands, and its context-registry commands move to `task-board context`. |
+| 2026-09-27 | No kernel command parks or stops sessions or the node. `task-board session park` and `task-board emergency-stop` / `estop` are withdrawn. Park is `curator session park`, and a run parks by the kernel's directive kind `park`. The one emergency stop is `keeper estop [<hive>]` over `curator session estop`, which runs `task-board board snapshot` on each board. |
+| 2026-09-27 | Beekeeping words appear only in `keeper`'s nouns, the apiary's directories and the profile name `apiary`; the host and the kernel use technical terms. |
 
 ## 17. Change log: v0 → v0.1
 
@@ -534,3 +567,22 @@ The terms follow `ax` §4.A, where a backend "owns exactly one host-local Termin
   - §16 gains the two decisions of 2026-09-25;
   - open question 3 covers Claude Mods.
 - **Diagrams:** "One host per node" names the new commands.
+
+## 19. Change log: v0.2 → v0.3
+
+Applied from the operator's adoption of the command-line shape on 2026-09-27:
+
+- **Added:**
+  - §12.1, the host's command line as the Curator provider `curator session …`, with keeper's front for each command and the migration from `task-board session`;
+  - the run directive kind `park` (§8);
+  - `curator session` in the terms (§1);
+  - open question 13, an emergency stop under a delegation.
+- **Changed:**
+  - the naming rule: beekeeping words only in `keeper`'s nouns and the apiary's directories (Names);
+  - §0: park and the emergency stop name their commands, and a new bullet names the command line;
+  - §8: park starts with `curator session park`; `task-board session park` is withdrawn; the start after a park may be `curator run`;
+  - §9: the one emergency stop is `keeper estop [<hive>]` over `curator session estop`, which asks for `EMERGENCY STOP` and the person's presence; `task-board emergency-stop` / `estop`, `--process` and `--confirm=STOP` are withdrawn; the snapshot is the kernel's `task-board board snapshot`;
+  - §12: `keeper chat <hive>` and `keeper session list`;
+  - §16 gains the decisions of 2026-09-27 and marks the superseded names;
+  - open question 12 speaks of the scope of `curator session estop`.
+- **Diagrams:** "Park and resume" and "Emergency stop" show the host's commands and the kernel's part; "One host per node" names the command line.

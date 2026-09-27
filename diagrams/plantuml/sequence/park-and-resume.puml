@@ -4,26 +4,25 @@
 title Park and resume through the board goal
 
 actor "Person or main loop" as P $PERSON
-participant "task-board session park" as K $SERVICE
-participant "Session host" as H $SERVICE
+participant "Session host\n(curator session park)" as H $SERVICE
+participant "task-board kernel" as K $SERVICE
 participant "Orchestrator session" as S $AGENT
 database "Board" as B $COMMITTED
 
 == Park ==
-P -> K: park SES [--reason]
-K -> H: park directive
+P -> H: keeper park, keeper down\n(curator session park SES)
 H -> S: doorbell (interrupt): write a park note
 S -> B: park note on the goal element:\nruns in flight, Change Requests awaiting\nreview or integration, pending decisions, next steps
+H -> K: append a goal revision
 K -> B: new goal revision: same objective,\nhandoff_ref = the note
-K -> H: resumable stop (the goal is not cleared)
-H -> S: stop
+H -> S: resumable stop (the goal is not cleared)
 
 == Resume ==
-P -> H: start, wake or keeper up\n(task-board claude, the main loop)
+P -> H: start, wake or keeper up\n(curator run, the main loop)
 H -> B: read the parent/primary head
 H -> S: /goal ... [rev N+1, handoff "<note>"] <condition>
 S -> B: read the park note first
 S -> S: continue the work
 
-caption Sources: spec §8; pkg/board/board_goal_v2.go (BoardGoalRevision); emergency stop: spec §9
+caption Sources: spec §8, §12.1; pkg/board/board_goal_v2.go (BoardGoalRevision); emergency stop: spec §9
 @enduml

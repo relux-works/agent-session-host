@@ -1,37 +1,39 @@
 @startuml emergency-stop
 !include ../_includes/theme.puml
 
-title Emergency stop: task-board emergency-stop (estop), proposed
+title Emergency stop: keeper estop over curator session estop
 
 actor "Operator" as P $PERSON
-participant "task-board emergency-stop" as E $SERVICE
+participant "keeper estop\n(the person's front)" as KE $SERVICE
+participant "Session host\n(curator session estop)" as H $SERVICE
 participant "task-board kernel\n(task-board's own code,\nno model)" as K $SERVICE
-participant "Session host" as H $SERVICE
 participant "Orchestrator sessions" as S $AGENT
 participant "Runs" as R $AGENT
 database "Boards" as B $COMMITTED
 
-P -> E: estop [--process NAME]
-E -> P: lists every session and run it will stop;\n"type STOP to continue"
-P -> E: STOP
-note right of E
-  refused from inside a hosted
-  session or a run (operator only)
+P -> KE: keeper estop [<hive>]
+KE -> P: lists every session and run it will stop;\nasks for "EMERGENCY STOP" and presence
+P -> KE: EMERGENCY STOP, with presence\n(OS user authentication or the companion app)
+note right of KE
+  the main loop may call it only under
+  a delegation that names the trigger;
+  every other agent session is refused
 end note
-E -> K: snapshot every affected board
+KE -> H: estop [<process>]
+H -> K: task-board board snapshot, per affected board
 K -> B: runs in flight, Change Requests awaiting\nreview or integration, obligations, unrouted notices
-E -> H: interrupt: write a short note (10-30 s, default 20)
-H -> S: interrupt, then the note request
+H -> S: interrupt: write a short note (10-30 s, default 20)
 S -> B: optional short note
-E -> R: stop in a resumable way (open question)
-E -> H: resumable stop of every affected session
-H -> S: stop (goals are kept)
-E -> B: goal revision per board:\nhandoff_ref = snapshot + note
-E -> P: report: stopped, not stopped
+H -> R: stop in a resumable way (open question)
+H -> S: resumable stop (goals are kept)
+H -> K: goal revision per board
+K -> B: handoff_ref = snapshot + note
+H -> KE: stopped, not stopped
+KE -> P: report
 
 == Later ==
 P -> H: keeper up
 H -> S: resume with the goal and its handoff note
 
-caption Sources: spec §9, §11
+caption Sources: spec §9, §11, §12.1; main-loop specification §10.3
 @enduml
