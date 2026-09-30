@@ -27,7 +27,13 @@ The main loop needs to start and supervise the root orchestrator of every proces
 | SH4 | the `tmux` terminal backend (§13) | `tmux attach -r` shows a session read-only; the conformance suite passes |
 | SH5 | context and limit telemetry per adapter; the handoff before compaction (§10) | a session that compacts continues from its handoff; the watchdog receives context and limit events |
 | SH6 | the `ax` backend, once `ax` ships its Unix terminal backend and task-board bridge; the `curator run` → host bridge (spec §3.4) | the host delegates a session to `ax` by configuration; attach and continuation come from `ax` |
-| SH7 | further adapters: Muse, agy, Pi, Qwen | each passes the adapter conformance suite |
+| SH7 | further adapters: agy, Pi, Qwen | each passes the adapter conformance suite |
+
+**Muse goes ahead of the extraction, narrowly** (*decided 2026-09-28*, EPIC-260927-5c4nxe), outside SH7:
+
+- now: the `muse serve` owner host with its MSP client, built unwired;
+- after TASK-260927-1okvcs (primary and goal sessions without infra): its wiring into task-board, the Muse PTY primary and the as-is extraction;
+- no Muse producers until the environment fix is released and pinned, because a Muse child currently inherits the whole parent environment.
 
 ## Dependencies
 
