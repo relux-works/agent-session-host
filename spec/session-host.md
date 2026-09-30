@@ -239,6 +239,7 @@ The main loop starts and supervises the root orchestrator of every process on it
    - park and emergency-stop completion.
 7. **R7. Many processes on one node.** One host serves all of them (§5).
 8. **R8. Recovery.** After a reboot every session that was running comes back through one entry point (§11).
+9. **R9. Orchestrator sharding across harnesses and subscriptions** *(decided 2026-09-24: carried by this module)*. The module carries the sharding of orchestrators across harnesses and across subscriptions. <!-- TODO(tb-keeper): source: relux-works/wiki decisions.md, "2026-09-24: process configuration, session host, priorities", *Session-host module* ("It carries the waggle doorbell, the upgrade-without-hangup design … and orchestrator sharding across harnesses and subscriptions"). The decision assigns the topic to this module and defines nothing else: what a shard is, whether the split follows the limit plane of agents-management, and which phase builds it. Placement: §4 as a requirement, §5, or §0. -->
 
 ## 5. One host per node *(proposed; pending the operator)*
 
