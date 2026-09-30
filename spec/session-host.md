@@ -537,6 +537,10 @@ The terms follow `ax` §4.A, where a backend "owns exactly one host-local Termin
 | 2026-09-28 | The agents-infra exit campaign runs in two gates. Gate A (nothing needs agents-infra; children run in per-role Curator profiles) does not wait for the `curator run` → host bridge: primary and goal-bound sessions use the same construction as children. Gate B brings the first machine-local runtime binding and the M5a inference extraction that Gate A needs. |
 | 2026-09-28 | Muse goes ahead of the host extraction, narrowly: now, a curated child environment and an update pin in the Muse plugin, and an unwired `muse serve` owner host with its MSP client; after primary and goal sessions run without infra, the wiring into task-board, the Muse PTY primary and the as-is extraction; no Muse producers until the environment fix is released and pinned, because a Muse child inherits the whole parent environment today. |
 
+Recorded as a cross-reference, not as part of this specification *(the operators' evening call of 2026-09-29)*: remote workers start with an empty HOME; HOME and credentials move to Curator after the prototype; dynamic tool definitions stay stable over a worker's history; the orchestrator is model-agnostic.
+
+<!-- TODO(tb-keeper): source: relux-works/wiki decisions.md, "2026-09-29 evening call: the shared swarm, remote workers, trust", *Remote workers start with an empty HOME* and *The orchestrator is model-agnostic*; digest research/call-digest-2026-09-29-evening.md §4 Remote workers. The prototype is a session started on a machine and told where to connect, outside the board. Open: whether this host ever hosts such a worker, where the HOME rule lands once Curator owns HOME and credentials, and whether this note belongs here, in §16 as a row, or only in the wiki. -->
+
 ## 17. Change log: v0 → v0.1
 
 - **Added:**
