@@ -209,6 +209,7 @@ The first step moves code, not behaviour. Improvements come after the module sta
 - A host "receives a composed plan and never composes" (0021 §2; Decision 0019). This module is where that bridge's hosting half lives.
 - The bridge's shape, an `ax` shim or the daemon answering `ax start`, is Decision 0021 open question 1.
 - Tracked non-interactive children stay with `task-board spawn` (0021 §6).
+- **Until the bridge exists**, primary and goal-bound sessions are built with the same construction as children: a per-role Curator profile through agents-management. Gate A does not wait for the `curator run` → host bridge, so the bridge is a later dependency (track SH6), not a prerequisite of SH1 or SH2. *decided 2026-09-28*
 
 ### 3.5 Done when
 
@@ -224,7 +225,7 @@ The main loop starts and supervises the root orchestrator of every process on it
 1. **R1. Start in a process directory.** Start a hosted root session in any process directory the main loop has registered:
    - the session gets that directory as its working directory, the process's Curator profile and managed home, and the board's `parent/primary` goal;
    - it runs in the background with no client attached;
-   - the launch is composed by `curator run` (Decision 0021) and handed to the host.
+   - the launch is composed by `curator run` (Decision 0021) and handed to the host once the bridge exists; until then it uses the children's construction (§3.4).
 2. **R2. One root session per process.** Exactly one root session is started from outside for each process. Today's singular `parent/primary` slot already enforces this per board (§2.2). Sub-orchestrators and runs are spawned by the root session inside its own board; the main loop never starts them.
 3. **R3. Attach.** A person can attach to root sessions and to owner-run sub-orchestrators, in control mode (`keeper chat`) or read-only mode (`keeper watch`) (§12). Attaching to short-lived worker runs is optional; their transcripts suffice.
 4. **R4. Doorbell for detached sessions.** Notices and main-loop messages reach a running session that has no client attached, through the delivery modes of §7.

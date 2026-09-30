@@ -26,13 +26,13 @@ The main loop needs to start and supervise the root orchestrator of every proces
 | SH3 | **one host per node** with per-session `pty` holders (§5), one registry, the `keeper chat` picker and `keeper watch` (§12) with read-only views of sub-orchestrators (R3), and reboot restore through `keeper up` (§11); the command line becomes `curator session …`, `task-board session` an alias for one release, and the context-registry commands move to `task-board context` (§12.1) | a host restart leaves every session running and re-adopted; one picker lists every session on the node; a reboot restores the main loop and every root orchestrator |
 | SH4 | the `tmux` terminal backend (§13) | `tmux attach -r` shows a session read-only; the conformance suite passes |
 | SH5 | context and limit telemetry per adapter; the handoff before compaction (§10) | a session that compacts continues from its handoff; the watchdog receives context and limit events |
-| SH6 | the `ax` backend, once `ax` ships its Unix terminal backend and task-board bridge | the host delegates a session to `ax` by configuration; attach and continuation come from `ax` |
+| SH6 | the `ax` backend, once `ax` ships its Unix terminal backend and task-board bridge; the `curator run` → host bridge (spec §3.4) | the host delegates a session to `ax` by configuration; attach and continuation come from `ax` |
 | SH7 | further adapters: Muse, agy, Pi, Qwen | each passes the adapter conformance suite |
 
 ## Dependencies
 
 - **task-board.** The seam; the goal ledger and a `handoff_ref` field on `BoardGoalRevision`; the `session` commands until SH3, then an alias; `task-board board snapshot` for the emergency stop; the run directive kind `park`; `task-board context` for the context registry; a resumable suspension of runs (spec open question 5).
-- **Curator launcher.** `curator run`, and the `ax start --launch-plan` contract and its bridge (curator-spec Decisions 0019 and 0021).
+- **Curator launcher.** `curator run`, and the `ax start --launch-plan` contract and its bridge (curator-spec Decisions 0019 and 0021). The bridge is a later dependency (SH6), not a prerequisite of SH1 or SH2: until it exists, primary and goal-bound sessions are built with the children's construction, a per-role Curator profile through agents-management (Gate A, wiki decisions.md 2026-09-28; spec §3.4).
 - **Curator.** Provider installs, so that `curator-session` reaches a trust root: first-party providers beside `curator`, and `curator provider install` (curator-spec issue #100, curator issue #96).
 - **waggle.** The delivery modes and their mapping (spec §7); signed `cmd` messages for supervision from CM2. waggle §10 needs an amendment, because it still lets messages wait while no client is attached.
 - **The main loop** (relux-works/curator-keeper): the registry of processes, the same supervision matrix, `keeper up`, `keeper down`, `keeper chat`, `keeper watch` and `keeper estop`, and the watchdog.
