@@ -461,7 +461,7 @@ The person uses three commands of the main loop; underneath each is the host's a
 - **Migration.** Phase 1 changes no command (§3.5). From the node host (track SH3) on:
   - `curator session …` is the host's command line, and `task-board session …` stays an alias of it for one release;
   - the four context-registry commands under `task-board session` (`context-completeness`, `context-economics`, `reclaim-contexts`, `sweep-contexts`) are not host operations, so they move to `task-board context` (`list`, `show`, `economics`, `gc`) instead of leaving with the host;
-  - `task-board claude|codex` are already aliases of `curator run claude|codex` by curator-spec Decision 0021 §5; `--resume <uuid>`, which adopts a foreign native session, becomes `--adopt <uuid>`; the detach hint prints the canonical command, and the `anthropic-board` and `openai-board` launchers retire.
+  - `task-board claude|codex` become aliases of `curator run claude|codex` (decided 2026-09-27; curator-spec Decision 0021 §5, adoption pending); `--resume <uuid>`, which adopts a foreign native session, becomes `--adopt <uuid>`; the detach hint prints the canonical command, and the `anthropic-board` and `openai-board` launchers retire.
 - **Runtime ids.** Every command names a harness by its runtime id (`claude`, `codex`, `muse`, `pi`, or a binding id), the same values `curator run` and `task-board spawn --runtime` take.
 
 ## 13. Terminal backends and transport *(recorded for later; proposed)*
