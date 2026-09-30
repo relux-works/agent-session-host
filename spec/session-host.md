@@ -412,6 +412,7 @@ What it does, in order:
   The exact fields are verified per harness version.
 - **Before compaction** the host rings the orchestrator in `next_turn` mode, or `steer` when compaction is imminent, to write a handoff. task-board appends a goal revision with `handoff_ref`, as in §8, and the session keeps running. After compaction the native goal payload carries the reference.
 - **Limits.** The same events carry provider limit readings that the launch plane already tracks.
+- **Budgets for Muse and agy** *(decided 2026-09-24)*. The host enforces the budgets of the Muse and agy adapters: it keeps the accounting, rings a wrap-up notice at 90 % of the budget and pauses the session at 100 %. <!-- TODO(tb-keeper): source: relux-works/wiki decisions.md, "2026-09-24, late additions", the *Budgets* sentence of the *Muse* bullet ("enforced by the host (accounting, wrap-up notice at 90%, pause at 100%)"). The decision names Muse and agy only. Not decided there: whether Claude and Codex get the same; which delivery mode of §7 the wrap-up notice uses; whether the pause at 100 % also messages the orchestrator (the consistency review reads it so); where a budget is set (the goal, the launch plan or the operator's files). Placement: §10, or the adapters of §3.3. -->
 - **The watchdog** of the main-loop specification consumes both kinds of events. It asks for a handoff early, parks a session that cannot continue, and tells the person.
 
 ## 11. Reboot restore *(proposed)*
