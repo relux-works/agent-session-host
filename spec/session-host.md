@@ -202,6 +202,8 @@ The first step moves code, not behaviour. Improvements come after the module sta
   A plugin exits after each operation, so only stateless operations cross that boundary: probe, launch spelling, goal-command rendering and acknowledgement parsing. The long-lived terminal stays with the host or its terminal holder (§5, §13).
 - **Operations:** start, resume, stop, status, attach target, apply a goal revision, clear it, acknowledge the exact revision, deliver a notice, and an event stream.
 - **Adapters:** Claude (PTY) and Codex (app-server) first. agy, Pi and Qwen follow, each under its own story. Muse goes ahead of the extraction, narrowly: the `muse serve` owner host is built now, unwired, and wired after TASK-260927-1okvcs; no Muse producers until the environment fix is released and pinned (track; *decided 2026-09-28*).
+  - **Muse** *(decided 2026-09-24)*: an owner through `muse serve`, in its own Curator managed home, with the binary pinned, because Muse Code is publicly available and updates itself. It is built by a separate orchestrator.
+  - **agy** *(decided 2026-09-24)*: hooks in the profile's managed home, scoped by an environment marker.
 
 ### 3.4 Where it sits in the launch plane
 
