@@ -194,7 +194,7 @@ The first step moves code, not behaviour. Improvements come after the module sta
 ### 3.3 The contract
 
 - **In process first.** Phase 1 keeps the adapters as in-process Go implementations behind the existing interfaces, exported from this module. *proposed*
-- **The out-of-process form follows the ax provider plugin protocol** (`ax` SPEC §7.1-§7.3): *proposed*
+- **The out-of-process form follows the ax provider plugin protocol** (`ax` SPEC §7.1-§7.3): *decided 2026-09-24*
   - line-delimited JSON over stdin/stdout, one plugin process per operation;
   - a manifest and a probe;
   - structured errors that fail closed.
