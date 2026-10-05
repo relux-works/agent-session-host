@@ -1,0 +1,67 @@
+@startuml preserve-rebuild
+!pragma layout smetana
+!include ../_includes/theme.puml
+
+title Preserve versus rebuild: where each mode runs and where Remote Control sits
+
+node "Node (one OS user)" as NODE {
+  component "Session host\nsupervisor + journal" as HOST $SERVICE
+
+  rectangle "Preserve mode" as PRES {
+    component "Holder\nowns the PTY" as HP $SERVICE
+    component "Native TUI\n(Claude, Codex, Muse)" as TUI $AGENT
+    file "Native resume\n(--resume UUID,\nthread/resume)" as NR $PRIVATE
+  }
+
+  rectangle "Rebuild mode" as REB {
+    component "Holder\nowns framed pipes" as HR $SERVICE
+    component "Structured surface\n(stream-json, app-server, MSP)" as ST $SERVICE
+    file "Versioned handoff\n(export + seed)" as VH $COMMITTED
+    component "New execution\n(fresh execution refs,\nseeded conversation)" as NX $SERVICE
+    file "Linkage\n(old → new, at H)" as LK $COMMITTED
+  }
+
+  rectangle "Operator compatibility" as RC {
+    component "Claude Remote Control\n(vendor-authenticated\nparallel channel)" as RCH $AGENT
+  }
+}
+
+HOST --> HP : typed writes,\nreadiness-checked paste
+HP --> TUI : owns the terminal
+TUI --> NR : harness-owned continuity
+HOST --> HR : typed writes
+HR --> ST : framed protocol
+ST --> VH : export at H
+HOST --> NX : fresh admitted launch
+VH --> NX : seed only\nauthorized content
+NX --> LK : record linkage
+RCH --> TUI : parallel input\n(no session-core envelope)
+
+note right of VH
+  Rebuild is handoff, export, seed.
+  A journal states its supported
+  fidelity; it preserves no hidden
+  model or native tool state.
+  Native resume and seeded
+  conversation are distinct.
+end note
+
+note right of RCH
+  Outside per-message assurance.
+  Strict (mode S) sessions refuse RC
+  across all enablement routes.
+  Unavailable per-input provenance
+  is recorded as unknown.
+end note
+
+note bottom of HOST
+  Mode T gates managed bridge input.
+  Mode S additionally requires
+  demonstrated isolation at launch
+  and resume; without it the S
+  request is refused or parked,
+  never silently run as T.
+end note
+
+caption Sources: Architecture v1 §A3, §A4; session-core study rev 3 (modes T/S, RC classification)
+@enduml

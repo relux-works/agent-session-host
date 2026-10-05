@@ -1,4 +1,5 @@
 @startuml restart-survival
+!pragma layout smetana
 !include ../_includes/theme.puml
 
 title Surviving a host restart: today and target
@@ -19,16 +20,17 @@ rectangle "Today: pty backend" {
   end note
 }
 
-rectangle "Target: per-session holders (pty holder, tmux or ax)" {
+rectangle "Target (historical, superseded by Arch v1 §A7 + PR #8)" {
   node "Session host" as D2 $SERVICE
-  node "Per-session terminal holders\n(pty holder process, tmux pane, or ax)" as T2 $SERVICE {
+  node "Per-session terminal holders\n(pty holder process or ax;\ntmux superseded 2026-10-05)" as T2 $SERVICE {
     component "Claude PTY" as P2 $AGENT
     component "Codex" as C2 $AGENT
   }
   D2 --> T2 : create, attach,\ninject, observe
   note bottom of T2
-    Terminals outlive the host.
-    A restarted host re-adopts them.
+    Historical no-hangup target.
+    Requested restarts use park-and-restart
+    with confirmed stops (Arch v1 §A7, PR #8).
     People attach through the holder
     (control or read-only).
   end note
@@ -36,5 +38,5 @@ rectangle "Target: per-session holders (pty holder, tmux or ax)" {
 
 D1 -[hidden]-> D2
 
-caption Sources: docs/claude-goal-runtime.md "The daemon owns the PTY master"; docs/codex-goal-runtime.md; agent-session-manager-spec §1.3, §3, §4; spec §5, §13, §14
+caption Sources: docs/claude-goal-runtime.md "The daemon owns the PTY master"; docs/codex-goal-runtime.md; agent-session-manager-spec §1.3, §3, §4; spec §5, §13, §14 (target: historical, superseded; see §14)
 @enduml

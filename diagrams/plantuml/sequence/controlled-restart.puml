@@ -1,0 +1,82 @@
+@startuml controlled-restart
+!include ../_includes/theme.puml
+
+title Controlled restart: park, forced stop, exit, resume bridge, report
+
+actor "Operator" as OP $PERSON
+participant "Daemon\n(session host)" as D $SERVICE
+participant "Orchestrator\nsessions" as S $AGENT
+participant "Board kernel" as K $SERVICE
+database "Board" as B $COMMITTED
+participant "OS service manager\n(launchd, systemd)" as SV $PRIVATE
+participant "Resume bridge\n(login shell)" as RB $SERVICE
+
+== Close and park ==
+OP -> D: controlled restart
+D -> D: close admission\n(durable ordinary closure, survives exit;\nany held update lock stays set)
+D -> D: serialize starts, wakes, retries,\nconsumer-starting probes\nagainst both fences
+D -> S: park broadcast
+S -> B: park note per session
+D -> K: request goal revision\nwith handoff_ref
+K -> B: commit goal revision
+K --> D: committed revision\n(observed ready signal)
+D -> D: drain turns, approvals,\nlandings, integrates, pushes,\nledger latches
+alt all parked before the bound
+  D -> D: confirm every stop
+else bound reached
+  D -> S: forced resumable stops
+  D -> D: record forced stops and\nsnapshot fallbacks distinctly
+end
+break unresolved stops or\nunsettled safe points
+  D -> D: retain ordinary closure\nfor recovery
+  D --> OP: recovery report\n(no restore path)
+end
+
+== Exit and restart ==
+note over D
+  reached only on confirmed consumer exit
+  and settled safe points
+  (incl. detached consumers, Muse latches)
+end note
+D -> D: exit (ordinary closure stays for recovery\nuntil reconciliation completes;\nupdate lock untouched)
+SV -> D: start the replacement
+D -> D: reconcile closure\nand park records
+break ordinary closure unresolved
+  D -> D: retain ordinary closure\nfor recovery
+  D --> OP: recovery report\n(no restore path)
+end
+D -> D: ordinary closure ends\n(a held update lock stays set)
+
+== Resume bridge ==
+RB -> RB: wait for harness auth readiness\nwithin the bound\n(launch nothing while logged out)
+break auth not ready within the bound
+  D -> D: park with reason;\nretain goal, hold queued work\nuntil readiness
+  D --> OP: report every session\n+ host-health section
+end
+RB -> D: curator run <env> --hosted resume <SES>\n(plan recomposed, no stored env)
+opt update lock set
+  OP -> D: clear the update lock\n(only after recovery/update\nconditions hold)
+end
+break update lock still set
+  D -> D: hold automatic restore;\nsessions stay parked
+  D --> OP: report every session\n+ host-health section\n(no restored consumer)
+end
+D -> D: version gate: probes,\nknown-bad check, last-known-good
+D -> D: preserve explicit stops\nas skipped/stopped outcomes
+D -> S: resume eligible sessions\nnatively or start fresh\nfrom goal + park note\n(children resume under root)
+opt RC requested
+  D -> D: wait within the bound\nfor the requested RC registration
+  break registration not observed\nwithin the bound
+    D -> D: park with reason;\nretain goal, hold queued work\nuntil readiness
+    D --> OP: report every session\n+ host-health section
+  end
+end
+D --> OP: report every session\n+ host-health section
+
+note over OP, SV
+  A forced stop is not an emergency stop.
+  keeper estop stays a separate command.
+end note
+
+caption Sources: Architecture v1 §A7; PR #8 (branch amend/version-gate-update-window); spec §8, §11, §14
+@enduml

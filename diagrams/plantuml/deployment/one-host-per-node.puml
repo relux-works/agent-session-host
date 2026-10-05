@@ -1,4 +1,5 @@
 @startuml one-host-per-node
+!pragma layout smetana
 !include ../_includes/theme.puml
 
 title One host per node with per-session holders (proposed)
@@ -43,12 +44,13 @@ S1b --> B1 : writes its leased subtree
 S2 --> B2 : writes
 
 note right of HOST
-  Restarting or upgrading the host
-  leaves every holder running;
-  the new host re-adopts them.
+  Unplanned host loss may leave
+  holders running for re-adoption.
+  Requested restarts use park-and-restart
+  with confirmed stops (Arch v1 §A7, PR #8).
   One registry serves attach,
   doorbells, supervision and recovery.
 end note
 
-caption Sources: spec §5, §6; today: one daemon per board (spec §2.1, §2.8)
+caption Sources: spec §5, §6 (restart/upgrade survival: historical, superseded for requested restarts; see §5); today: one daemon per board (spec §2.1, §2.8)
 @enduml
