@@ -1,0 +1,50 @@
+@startuml signed-ingress
+!include ../_includes/theme.puml
+
+title Signed ingress: bridge, trust gate, injection, journal, projection
+
+actor "Operator or peer" as OP $PERSON
+participant "Bridge inbox\n(binding)" as BR $CARRIER
+participant "Ingress trust gate" as TG $SERVICE
+participant "curator-trust\n+ mandates" as TR $PRIVATE
+participant "Durable command queue" as CQ $PRIVATE
+participant "Supervisor" as SU $SERVICE
+participant "Harness adapter" as AD $SERVICE
+participant "Holder" as HO $SERVICE
+participant "Harness" as NA $AGENT
+database "Event journal" as JO $COMMITTED
+participant "Projection +\nconsumer" as PR $CARRIER
+
+== Admit ==
+OP -> BR: signed envelope
+BR -> TG: frozen bytes + binding
+TG -> TR: verify signature, resolve pin,\ncheck grant, freshness/replay
+TR --> TG: admitted / refused
+
+alt refused
+  TG --> BR: rejection + reason code
+  BR --> OP: rejection (nothing reaches the model)
+else admitted
+  TG -> TG: deterministic checks,\nframing, atomic commit
+  TG -> CQ: durable command + evidence
+end
+
+== Inject (admitted only) ==
+CQ -> SU: next command\n(reauthorize at dispatch)
+SU -> AD: typed write at a turn boundary
+AD -> HO: authenticated write\n(identity, epoch, generation, lease)
+HO -> NA: structured surface\n(stream-json, app-server, MSP)
+note right of HO
+  PTY only through the holder.
+  Never tmux.
+end note
+
+== Observe ==
+NA --> HO: structured events
+HO --> AD: events
+AD --> JO: normalized events
+JO --> PR: snapshot + tail\n(audience-checked)
+PR --> OP: state and pending decisions
+
+caption Sources: Architecture v1 §A3, §A4, §A5; session-core study rev 3
+@enduml

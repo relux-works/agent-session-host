@@ -1,0 +1,90 @@
+@startuml module-map
+!pragma layout smetana
+!include ../_includes/theme.puml
+
+title Module map: host, bridge, trust, launch, supervision, harnesses
+
+left to right direction
+
+actor "Operator" as OP $PERSON
+actor "Peer agent" as PEER $AGENT
+
+package "agent-session-bridge (public, separate)" as BRIDGE {
+  component "Input producers\n(Matrix, XMPP, app, mail)" as PROD $CARRIER
+  component "Ingress trust gate\n(verify, pin, grant, freshness,\nchecks, framing, commit)" as GATE $SERVICE
+  component "Output consumers\n(state, decisions, transcript, raw)" as CONS $CARRIER
+}
+
+package "curator-trust + mandates" as TRUST {
+  component "Signatures\n(pins, epochs, revocation)" as SIG $PRIVATE
+  component "Grants\n(actions, resources, audience)" as GR $PRIVATE
+}
+
+package "agent-session-host" as HOST {
+  component "Supervisor\n(registry, admission,\nscheduling, journal)" as SU $SERVICE
+  component "Durable command queue" as CQ $PRIVATE
+  component "Control API" as API $SERVICE
+  component "Park / restart" as PR $SERVICE
+  component "Harness adapters\n(claude, codex, muse packages;\ndesigned for a later split)" as AD $SERVICE
+  component "Holder per execution\n(subprocess + PTY or\nframed pipes)" as HO $SERVICE
+  database "Event journal\n+ projections" as JO $COMMITTED
+}
+
+package "Launch and supervision" as OPS {
+  component "curator run +\nagents-management" as RUN $SERVICE
+  component "keeper" as KEEP $SERVICE
+  component "Board facade\n(goals, RUNs, acceptance)" as BOARD $COMMITTED
+}
+
+package "Harnesses" as HAR {
+  component "Claude Code" as CL $AGENT
+  component "Codex" as CX $AGENT
+  component "Muse" as MU $AGENT
+}
+
+OP --> PROD : signed envelopes
+PEER --> PROD : peer data (untrusted)
+PROD --> GATE : frozen bytes + binding
+GATE --> SIG : verify, pin, freshness
+GATE --> GR : grant check
+GATE --> CQ : durable command + evidence
+BOARD --> GATE : typed directives
+CQ --> SU
+RUN --> SU : exact finalized plan\n(host never composes)
+KEEP --> API : supervise roots\n(reads + typed writes)
+API --> GATE : managed mutations\n(host-enforced admission)
+API ..> SU : read-only queries only\n(no mutation)
+SU --> PR
+SU --> AD : typed writes
+AD --> HO : authenticated writes
+HO --> CL
+HO --> CX
+HO --> MU
+CL --> HO : structured events
+CX --> HO : structured events
+MU --> HO : structured events
+HO --> AD
+AD --> JO : normalized events
+JO --> CONS : snapshot + tail\n(audience-checked)
+CONS --> OP : state, decisions
+
+note right of PROD
+  Producers never hold PTY
+  descriptors or native endpoints.
+end note
+
+note right of AD
+  Structured surfaces first.
+  PTY only through the holder.
+  Never tmux.
+end note
+
+note bottom of GATE
+  Admission is enforced host-side.
+  No client supplies a self-certified
+  admitted object. No managed mutation
+  bypasses the gate.
+end note
+
+caption Sources: Architecture v1 §A1, §A3, §A4, §A5, §A9; session-core study rev 3
+@enduml

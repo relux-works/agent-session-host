@@ -375,7 +375,7 @@ Fake-boundary evidence MUST precede later real-harness checks; each admitted Cla
 | Cases | Required evidence |
 | --- | --- |
 | Composition | Minimal/native policy; model+effort; MCP/inline JSON/system prompt; conflicting overlays; inherited/empty env; absent/empty env_names; quoted/Unicode/empty tail; Claude denial `--disallowedTools=AskUserQuestion` unchanged (A/pkg/agentic/systems/claude/toolpolicy.go:21), caller denials/re-enable refusal |
-| Claude RC/name | RC alone; -n alone; both; prefix; distinct host/native names; `curator run claude --hosted -n NAME -- --remote-control NAME`; remoteControlAtStartup settings path; RC live with intended native name; unsupported capability refuses |
+| Claude RC/name | RC alone; -n alone; both; prefix; distinct host/native names; `curator run claude_code --hosted -n NAME -- --remote-control NAME`; remoteControlAtStartup settings path; RC live with intended native name; unsupported capability refuses |
 | Muse | Both releases; HOME/XDG/auth link/update pin/trust/posture; text goals/notices; busy/trust-/permissions-dialog refusal; idle recheck; DSR/CPR; detach/native-ID resume; narrowing mutants; M2 status mapping |
 | Codex gate/variants | Refusal now; later corresponding module app-server/client/thread/restart/auxiliary inputs and only §1 transport differences; no second conversation |
 | Resume | Every §5.1 transition; quarantine/ties/pending forks/unknown/live-detached/renewal-required recovery; missing/corrupt/wrong-location handles; first/re-adoption conflict; equal/drift/unresolvable pin; renewal unavailable; selector/stdin non-replay |
