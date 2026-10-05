@@ -10,4 +10,6 @@ Status: specification draft.
 | --- | --- |
 | [`spec/session-host.md`](spec/session-host.md) | the specification: today's implementation, phase 1 extraction, the main loop's requirements, one host per node, access security, doorbell modes, park, emergency stop, compaction, reboot restore, the conversation and watch picker, terminal backends, restart survival |
 | [`spec/track.md`](spec/track.md) | milestones SH0-SH7, dependencies, risks |
+| [`spec/hosted-launch-contract.md`](spec/hosted-launch-contract.md) | the `curator run --hosted` contract: the launch-plan payload, the receiver, admission, terminal and completion protocol, daemon obligations, acceptance (agreed draft r6 plus the operator decisions of 2026-10-05) |
+| [`docs/overview.ru.md`](docs/overview.ru.md) | a one-page overview in Russian: how the new session host works and where each topic lives |
 | [`diagrams/`](diagrams/README.md) | diagrams as code (PlantUML) and their renders |
