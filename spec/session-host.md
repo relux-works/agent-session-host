@@ -81,7 +81,14 @@ This section is the review package for Ivan and Alexey. It sets the v1 direction
 
 Three markers say how settled a statement is: *decided (2026-10-05)*, *proposed*, and *fact* with its source. The older sections below stay for reference. Where they conflict with this section, this section wins for review. Superseded parts are marked at their sections.
 
-Sources: the session-core study, [revision 4 in the wiki](https://github.com/relux-works/wiki/blob/44fae997e2807c18b2288cec3bc7c5ed781546c3/research/2026-10-05-session-core-study.md) (revision 3's accepted direction plus publication fixes; supersedes rev 2 and rev 3); the design inputs of 2026-10-05; the hosted launch contract r6 plus the operator decisions of 2026-10-05; the decision record on resume and key storage ([PR #9](https://github.com/relux-works/agent-session-host/blob/a6fd2ba639507796642a97d217878c0c6c5a4b90/spec/decisions/2026-10-05-resume-without-persisted-env-and-key-storage.md): relux-works/agent-session-host, branch `decision/resume-env-and-key-storage`, commit `a6fd2ba639507796642a97d217878c0c6c5a4b90`, `spec/decisions/2026-10-05-resume-without-persisted-env-and-key-storage.md`); the [PR #8 amendment text](https://github.com/relux-works/agent-session-host/blob/4d70825ba230f8f9063881efb2cf210bbfa8ee11/spec/session-host.md) (relux-works/agent-session-host, branch `amend/version-gate-update-window`, commit `4d70825ba230f8f9063881efb2cf210bbfa8ee11`, `spec/session-host.md` §§8.1, 8.2, 11, 14 and §15 open questions 14–21); the environment manager revision 2 (cross-reference); the extraction plan revision 2 (orchestrator estimate). Diagrams: `module-map`, `signed-ingress`, `controlled-restart`, `preserve-rebuild`. Both PR #8 and PR #9 artifacts live on those separate branches, not on this branch; this branch carries no §8.1/§8.2 text and no `spec/decisions/` directory.
+Sources: the session-core study, [revision 4 in the wiki](https://github.com/relux-works/wiki/blob/44fae997e2807c18b2288cec3bc7c5ed781546c3/research/2026-10-05-session-core-study.md) (revision 3's accepted direction plus publication fixes; supersedes rev 2 and rev 3); the design inputs of 2026-10-05; the hosted launch contract r6 plus the operator decisions of 2026-10-05; the decision record on resume and key storage ([PR #9](https://github.com/relux-works/agent-session-host/blob/a6fd2ba639507796642a97d217878c0c6c5a4b90/spec/decisions/2026-10-05-resume-without-persisted-env-and-key-storage.md): relux-works/agent-session-host, branch `decision/resume-env-and-key-storage`, commit `a6fd2ba639507796642a97d217878c0c6c5a4b90`, `spec/decisions/2026-10-05-resume-without-persisted-env-and-key-storage.md`); the [PR #8 amendment text](https://github.com/relux-works/agent-session-host/blob/4d70825ba230f8f9063881efb2cf210bbfa8ee11/spec/session-host.md) (relux-works/agent-session-host, branch `amend/version-gate-update-window`, commit `4d70825ba230f8f9063881efb2cf210bbfa8ee11`, `spec/session-host.md` §§8.1, 8.2, 11, 14 and §15 open questions 14–21); the environment manager revision 2 (cross-reference); the extraction plan revision 2 (orchestrator estimate). Diagrams: `module-map`, `signed-ingress`, `controlled-restart`, `preserve-rebuild`. Both PR #8 and PR #9 artifacts live on those separate branches, not on this branch; this branch carries no §8.1/§8.2 text and no `spec/decisions/` directory. Vendor-contract input: the accepted study relux-works/wiki@d6cc5fc5c7e36785be67347e6d683e18d6190518:research/herdr/vendor-contract.md (§§D.1–D.9, G).
+
+### A0. Invariants (decided by Ivan 2026-10-05, R200)
+
+- **I1. Cryptography and verification of session input.** Every managed input into a session is cryptographically verified before it can act. *decided (2026-10-05)*
+- **I2. No process can simply write into a session.** A state report is an observation channel, never a command path into the session. *decided (2026-10-05)*
+- **I3. Scale to large swarms.** The design holds for large swarms, not only for one session. *decided (2026-10-05)*
+- Every module section below (§§A1–A12) preserves I1–I3. Vendor-contract support (§A12) never weakens them: it is observation only. *decided (2026-10-05)*
 
 ### A1. Module map
 
@@ -115,6 +122,10 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 - Acknowledged journal offsets free the holder's spool. Saturation yields a visible gap or a controlled pause. *proposed*
 - A reboot requires a renewed launch or resume. Claude PTY custody cannot migrate by copying records. *proposed*
 - Invoking a signed CLI does not make an agent a human. *proposed*
+- The holder owns each execution's vendor-report endpoint (§A12). *proposed*
+- The agent is a child of our holder/adapter, and the holder/adapter is its single writer. *position (Ivan, 2026-10-05)*
+- Nothing listens near the agent: the holder dials the supervisor with a key from an inherited fd, and there is no control socket in the agent's environment. *position (Ivan, 2026-10-05)* This position is in tension with the vendor-contract transport option (a), a telemetry-only listener (§A12); if Ivan picks (a), it would be the single stated exception, and the interim default stays `off`.
+- Sessions live as long as possible, ideally surviving a daemon restart underneath them: per-execution holders hold the PTY or stdio pipes, with authenticated re-adoption. *position (Ivan, 2026-10-05)*
 
 ### A3. Assurance modes and the gate guarantee
 
@@ -140,6 +151,7 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 | S launch or resume without isolation evidence | n/a (a separately requested T shows its exclusions) | Refused or parked; no fallback dispatch |
 
 - The board and keeper cross the same admission gate. Their adapter enters the trust gate, not the queue directly. *decided in direction (2026-10-05); wiring proposed*
+- Vendor reports are not gate commands. They are execution-local telemetry admitted by §A12; nothing in them reaches dispatch, except the one-directional readiness veto stated in §A12. *proposed*
 - Local APIs and model mailbox reads use the same gate. *proposed*
 - The gate runs this pipeline at every managed input boundary. *proposed*
   1. Bound and freeze: reject oversized, malformed, ambiguous-version, or duplicate-field envelopes; freeze the exact signed bytes.
@@ -217,6 +229,11 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 | Local revocation | Closes host dispatch; RC continues unless separately disabled | Refuse |
 | Permission race (typed card pending, RC resolves natively) | Native resolution invalidates the pending card as externally resolved; never recorded as host-authorized; the stale card closes with vendor or unknown provenance | Refuse |
 
+- Vendor telemetry can only veto injection within a freshness window; it never satisfies readiness. Native readiness evidence, the terminal lease, and the execution epoch stay independent of it (§A12). *proposed*
+- Every input is an admitted command with an exact-byte signature, verified at the host gate before the adapter. *position (Ivan, 2026-10-05)*
+- Codex uses a shared app-server: the native TUI (`codex --remote … resume`) and our host drive one engine through a local gateway, so preserve and structured coexist. Messages go via `thread/queue/add` with a client message id; `turn/steer` is separate. *position (Ivan, 2026-10-05)*
+- Claude preserve keeps the live TUI with RC alive. Injection happens only through our holder, only for admitted signed commands, only when the prompt is ready, and never with a blind Enter. Switching to stream-json via native resume is an explicit mode change, because it ends the TUI process and RC with it. *position (Ivan, 2026-10-05)*
+
 ![Preserve versus rebuild](../diagrams/artefacts/plantuml/preserve-rebuild.svg)
 
 ### A5. Output journal, projections, and audit
@@ -247,6 +264,8 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 - Receipts distinguish durable acceptance, dispatch, native application evidence, and rejection. *proposed*
 - A crash after a PTY write can leave `outcome_unknown`. Native evidence is reconciled before replay. *proposed*
 - Process exit and turn completion do not establish board acceptance. *proposed*
+- Every admitted vendor report is a journal event `{exec, source, seq, agent, state, message, peer facts, assurance, decision, n}` admitted as `queued` (or `coalesced` under pre-acceptance backpressure) and covered by durable commit or crash-gap recovery; a complete payload receipt exists only for a `durably_committed` record, gaps attest ranges and reasons, never omitted payloads or a known count of lost reports; one commit format carries an exact partition of positions per execution from a genesis anchor, refusals are aggregated, and the audit chain covers batches, retention anchors, and checkpoints (§A12). *proposed*
+- Output from a TUI comes from the native transcript, read-only: Claude hooks give transcript path and timing; Codex uses rollout files or the app-server subscription; Muse uses its session log or MSP. It flows adapter → our journal (seq, cursor) → bridge → any destination, with per-binding egress policy and signed receipts. No screen scraping. *position (Ivan, 2026-10-05)*
 
 ### A6. Key lifecycle
 
@@ -269,6 +288,7 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 - Critical acts require per-act presence bound to the act digest. Secure Enclave residency alone is not presence. *proposed*
 - The verifier distinguishes `fido-uv`, `attested-app`, and `local-os`. *proposed*
 - An unattended host key or 0600 file is not a human presence key. *decided (2026-10-05)*
+- The vendor-report receipt key is a host principal key under this lifecycle; the checkpoint key belongs to the roster keeper. Routine rotation retires; suspected exposure goes through a compromise record with a last trusted checkpoint prefix; verification needs a fresh authenticated roster head (§A12). *proposed*
 
 ### A7. Park, restart, and reboot
 
@@ -278,7 +298,7 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 - A note deadline is not a drain deadline. Drain waits for turns, approvals, landings, integrates, pushes, and ledger latches, including detached consumers and Muse latches. *decided in direction (2026-10-05)*
 - The emergency stop stays a separate command. A forced stop is not an emergency stop. *decided (2026-10-05)*
 - Mechanics are carried by the PR #8 text (branch `amend/version-gate-update-window`): the optimistic version gate (§8.1), the slim update window (§8.2), the resume bridge (§11), and the controlled restart (§14). *reference*
-- A controlled restart closes admission before the park broadcast and serializes that ordinary closure with starts, wakes, retries and consumer-starting probes. An existing durable update lock stays set through park, exit, replacement and reconciliation; it never blocks the ordinary closure. The ordinary closure ends on its own successful reconciliation without clearing the separate update lock. Otherwise it is retained for recovery. The operator clears the update lock immediately before eligible restore, after the recovery/update conditions hold; while it stays set, no consumer is restored. *PR #8, proposed*
+- A controlled restart closes admission before the park broadcast and serializes that ordinary closure with starts, wakes, retries and consumer-starting probes. An existing durable update lock stays set through park, exit, replacement and reconciliation; it never blocks the ordinary closure. The ordinary closure ends on its own successful reconciliation without clearing the separate update lock. Otherwise it is retained for recovery. The operator clears the update lock immediately before eligible restore, after the recovery/update conditions hold; while it stays set, no consumer is restored. Under the closed clearing rule below, this operator-clear sentence describes only the permitted operator-only v1 profile and failed/unknown recovery: in an auto-clear implementation verified success clears inside its update transaction, and ordinary reconciliation never clears the separate update lock. *PR #8, proposed*
 - At the bound the daemon records forced resumable stops and snapshot fallbacks distinctly. Unconfirmed stops keep the closure for recovery. *PR #8, proposed*
 - The OS service manager (launchd/systemd) restarts the daemon after replacement. It is distinct from the host supervisor in §A2. *PR #8, proposed*
 - Resume uses the login-shell bridge with no persisted environment. The launcher recomposes the plan from the profile and the login environment. *decided (2026-10-05); record: PR #9*
@@ -289,8 +309,12 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 - The report covers every session plus a host-health section. No session disappears silently. *PR #8, proposed*
 - Login restore runs only after a fresh boot. Manual restore works at any uptime. *PR #8, proposed*
 - Reboot restore installs nothing. Pending updates use the planned window under the durable node-wide lock. *PR #8, proposed*
+- A vendor `resume_argv` hint is shown at resume and compared with the plan; resume still runs through the launcher and the version gate (§A8), and counters and anchors behave as §A12 says. *proposed*
+- The update lock clears automatically inside the same update transaction after VERIFIED success: the update record proves the new component runs, its probes pass, and state is compatible. After a failed or unknown outcome the lock stays, survives restarts, keeps every auto-start off, and only the operator clears it. V1 may ship operator-only clearance; auto-clear on proven success is the target, not a blocker. *position (PR #8 owner, 2026-10-06); the clearing rule is closed*
 
 ![Controlled restart](../diagrams/artefacts/plantuml/controlled-restart.svg)
+
+The diagram above depicts the operator-clear path (operator-only v1 / failed-unknown recovery); it does not restrict the auto-clear target. *clarification under the closed clearing rule*
 
 ### A8. Harness version policy
 
@@ -342,6 +366,7 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 - A PTY plan is never converted to a structured process inside the host. *proposed*
 - The §A7 park wording covers board sessions with a goal revision. Plain-session park and handoff semantics, and mode selection, must be defined by the host owner with the launcher owner. Until then they are open (see A-Q3 and A-Q10). *proposed*
 - This work links to the host, bridge, and launcher owners and to the retained phase gates. No completed schemas are invented here. Yolo, optimistic versions, and Codex parity open no unrelated gates. *proposed*
+- The vendor-report endpoint is a per-launch capability `vendor_reports: herdr/1` with `transport` and `min_assurance`; a plan may disable it (§A12). *proposed*
 
 ### A10. Adopted ideas
 
@@ -364,7 +389,64 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 | Pinned-model guard contract, fail-closed, exact-digest review | Reef | agent-session-bridge | Adapted: same contract shape, optional rather than Reef-mandatory. |
 | Single semantic write gate: accepted/dispatched/applied/unknown | The session-platform draft | agent-session-host | Adopted: retried delivery never blindly retries a native prompt. |
 | Relay as source of truth with readable server content | buzz | agent-session-bridge | Rejected: conflicts with E2E; the relay stays ciphertext-only where E2E is promised. |
-| HAPI code transplantation | hapi | agent-session-host | Rejected for now: AGPL-3.0; study behavior pending a licence decision. |
+| HAPI code transplantation | hapi | agent-session-host | Rejected for now: AGPL-3.0; study behavior pending a licence decision. *(historical; superseded by the R200 inspiration-only rule below: the code-reuse direction is closed, and no later licence decision reopens it.)* |
+| HAPI I/O topology with trust and certificates | hapi (Ivan's input 2026-10-05; wiki `research/inputs-2026-10-05/hapi-message-path.ru.md`) | agent-session-host | Position (Ivan, 2026-10-05), for joint review: agent as holder child, holder dials supervisor, signed admitted commands; nothing listens near the agent. |
+
+- herdr, Reef, Buzz, and HAPI are inspiration only: no backend, fork, or code transplant is taken from any of them. The adopted rows above are our own designs. *decided (2026-10-05)*
+
+### A12. Vendor reports: herdr vendor-contract support
+
+Input: the accepted vendor-contract study relux-works/wiki@d6cc5fc5c7e36785be67347e6d683e18d6190518:research/herdr/vendor-contract.md, published r5.1 — frozen input. Its §D.9 describes the old `37e70422` mapping; §A12 below plus its local cross-references now own the live mapping and all subsequent amendments (corrections land here, not in the study). Version and conformance maintenance follows study §D.7 under local ownership and never silently substitutes a later upstream contract; study §D.10 stays conditional and separately gated. No herdr backend, fork, or rewrite; our own core. *decided (2026-10-05)*
+
+- The host supports herdr's vendor contract — `report_agent`, `report_agent_session`, `release_agent`, optional `seq`, and the launch environment the transport matrix below sets or strips — so a harness that speaks it works unchanged, within the declared compatibility restrictions. *decided (2026-10-05)*
+- A vendor report is an observation-only channel: it changes display state and reported-status waits for that one execution and nothing else. For every report the host keeps three things apart: the self-report (evidence the sender said this, none that it is true); the observed OS facts (peer principal, process identity, membership, with the assurance level the OS primitives actually support); and the host receipt (evidence the host saw and decided exactly this). *proposed*
+- One endpoint per execution, owned by the holder. A `pane_id` that is not this execution's id is `pane_not_found`. The endpoint serves the four report methods and `ping` and nothing else; it cannot reach terminal or native input, dispatch, or grants. *proposed*
+- Admission is honest about what the OS proves. Qualified admission — the kernel binding the writer's identity to the bytes — exists only on Linux ≥ 6.5, through per-fragment `SCM_CREDENTIALS` plus `SCM_PIDFD` under the complete receive contract (credentials enabled before `listen`, verified per accepted socket, exact control sizing with one spare slot to detect extras, truncation and unexpected descriptors rejected, one sender per request, liveness and cgroup membership re-checked per fragment). macOS and Windows are guardrail overall: the level is the weakest component. The assurance (`qualified` | `guardrail`) is written into the journal event and the receipt, and the launch plan's `vendor_reports.min_assurance` refuses anything below it. *proposed; OS facts per study §D.2*
+- Daemon workers outside the harness tree (delegates) are unsupported by default; registration is a gate command, never a listener method, capped at 4 delegates per execution. Membership is never widened to the whole account. *proposed*
+- Receipt contract: §A12 adopts study §D.3 as its initial contract; the rules below are normative here, and §A12 owns all amendments. The receipt carries no JSON numbers: every full-precision integer is a canonical decimal string (ASCII digits, no sign, no leading zero except `"0"`; compare by length, then lexicographically). The payload commitment is domain-separated over the retained raw request bytes: `payload_commit = sha256("asr-vendor-report/v1" || 0x0A || decimal(len(raw)) || 0x0A || raw)`, where `raw` is exactly the request line before its terminating `0x0A` (a preceding `0x0D`, if a sender writes CRLF, stays part of `raw`). Canonical bytes are JCS over objects holding only strings, arrays, objects, and `null`; the signature is SSHSIG with namespace `agent-session-host/receipt/v1`. The receipt key is a host principal key held in the holder process only: never in the environment, never in an inherited descriptor, never in the agent's process tree. *proposed*
+- Every commit is a batch (`{v, kind, host, batch_n, prev, window, records, gaps, count, t_ms}`) binding records (`{exec, epoch, endpoint, n, method, source, agent, seq|null, payload_commit, peer, decision, t_ms}`, with peer `{os, principal, pid, pid_identity, connector|null, membership, assurance}`) and gaps (`{exec, epoch, n_from, n_to, count, reason: coalesced|crash}`) of many executions to their execution and epoch, chained by `prev` and `batch_n`. `count` is the number of records; every gap has `n_from ≤ n_to` and `count = n_to − n_from + 1`; a gap-only batch is valid, a batch with neither records nor gaps is not. Per execution, positions form an exact partition: every position exactly once, no overlap, no duplicates; a record or gap for an `(exec, n)` already seen in an earlier valid batch is a conflicting duplicate — the batch is rejected and the chain is marked inconsistent from that `batch_n` on, the earlier content stands. Verification of an execution starts at `"1"` after its genesis anchor or at its retention anchor's `purged_through + 1`; a record whose epoch is fenced verifies as historical. Crash gaps cover reserved positions from the durable allocation watermark; the number of reports lost in one is unknown. *proposed*
+- An admitted report is `queued` (admitted, position allocated, batch not yet committed), `coalesced` (folded under journal-byte backpressure before acceptance, display still updated), or `durably_committed` (its batch committed; only now does a complete receipt exist). A vendor's `ok` — including a successful one-way shim write — is not durable attestation. *proposed*
+- Suspected key exposure goes through the compromise path only: the keeper's compromise record names a last trusted checkpoint prefix established before the earliest possible exposure, coverage is compared against that prefix, with no safe prefix nothing under the key survives. Routine rotation retires with `valid_until` and a retirement checkpoint position. Checkpoints are signed by the roster keeper's `checkpoint` key, held by the keeper service under its own OS account and never by any holder, and appended to the roster's own signed log, whose positions order checkpoints, compromise records, and retirements. A compromised checkpoint key voids later checkpoints under the same prefix rule. A verifier needs a fresh authenticated roster head (keeper-signed, monotonic head sequence, age below the policy maximum); without it the answer is `unknown`, or explicitly historical; key validity is never derived from receipt timestamps. *proposed*
+- Lifecycle freshness, one rule for all three lifecycle methods (study §A.4): `report_agent`, `report_agent_session` and `release_agent` share one lifecycle anchor per `source` within the execution. A supplied `seq` must be newer than that anchor; an omitted `seq` is eligible only while the source has no anchor. Freshness is checked before any method effect, and `release_agent` additionally requires a matching `source` and `agent`. The metadata domain is separate (an omitted `seq` there is always fresh), and `clear_agent_authority` stays forbidden. Acceptance: for each lifecycle method an omitted `seq` before an anchor is eligible, subject to the method's other checks; an omitted `seq` after anchor 10 is ignored; 9, 10 and 11 are stale, stale and fresh; interleaved identity, state and release reports from one source consult the same anchor; no hint changes a running session's input or bypasses launch authorization. *proposed*
+- Report-only semantics per method:
+
+  | Method | Rule |
+  | --- | --- |
+  | `report_agent` | Updates display state for this execution; keeps the session reference for every source; lifecycle freshness per the common rule above; unknown `state` values are `invalid_request`, never mapped to `unknown`; `resume_argv` on a report that is not applied is dropped silently. |
+  | `report_agent_session` | Identity only: session reference (paths stay identity data) and `session_start_source` normalized as herdr does; no state change; lifecycle freshness per the common rule above, so an unsequenced or stale identity report never overwrites identity behind a newer anchor. |
+  | `release_agent` | Applied when `source` and `agent` match the current authority and the common freshness rule holds (with last sequence 10, releases at 9 and 10 are stale, 11 is fresh; an unsequenced release is eligible only while no anchor exists); clears display state and the stored hint. |
+  | `report_metadata` | herdr's limits and normalization verbatim (80-char caps, 16 per report, 32 keys, 32 sequenced token sources, TTL 1 ms…24 h, guards, stored-but-hidden presentation) plus the §D.8 total cap of 32 metadata sources; the metadata sequence domain is separate, and a missing `seq` there is always fresh. |
+  | `resume_argv` | Validated with herdr's format rules and stored as a hint with provenance (source, agent, seq, receipt `n`); shown to the operator and the launcher. The launcher may use it only for fields the harness adapter allows (for example `--resume <id>`) and logs the decision; never typed into a shell; never supplies an executable, arbitrary argv, or session-input authority — validation is format only, authority comes from the launcher. |
+  | `ping` | Report-only identity: our version, the compatible herdr protocol number, and `capabilities.report_only: true`. |
+
+  *proposed*
+- `clear_agent_authority` is refused with `forbidden`: administrative reset is a gate command, never a listener method. Anything outside the four report methods and `ping` is `invalid_request`. *proposed*
+- Readiness: vendor telemetry can only veto injection within a freshness window; an `idle` report never satisfies readiness, and waits distinguish `reported:<state>` from `completed`. *proposed*
+- Lifecycle and anchors (study §D.8; the target of the §A7 reference): vendor sequence anchors, execution epochs, report positions, and the durable allocation watermark are separate things. No process-generation resets within an execution; no anchor eviction and no silent sequence refresh. Park closes the endpoint and reports get a connection refusal; exit or crash closes the endpoint, unlinks the socket, closes open connections, drops delegates, and lets final records ride the next batch; replacement fences the old endpoint — already-open connections receive `stale_pane_target` on their next request and are then closed, the epoch checked per request; resume or replacement creates a new endpoint and a new epoch and resets both vendor sequence domains (lifecycle and metadata), while report positions and the durable allocation watermark stay governed by the receipt rules (study §D.3) and never reset; reboot recreates an empty runtime root and resumes `n` from the durable watermark with a `crash` gap for the reserved positions. An agent restart inside one execution that restarts `seq` at 1 is ignored until it exceeds its old anchor. *proposed*
+- Bounds are a design target, not a measured result: designed for 4,096 executions per host, not load-tested. Framing and retained state (study §D.8): frame ≤ 16 KiB — an explicit compatibility restriction (herdr documents no limit and accepts larger lines; the escaped-Unicode oversize case is a conformance fixture); lifecycle sources ≤ 8 per execution, metadata sources ≤ 32 in total, `source` ≤ 128 bytes, `agent` ≤ 64 bytes, `message` ≤ 1 KiB truncated; metadata keeps herdr's character limits counted at 4 bytes per character; retained state ≤ 130 KiB counted, cap 144 KiB enforced (`state_budget_exceeded` before any state change). Per execution: one endpoint, ≤ 2 concurrent connections, 2 s read and 5 s write timeouts, 20 requests/s sustained with a burst of 100. *proposed*
+- Aggregate admission and backpressure (study §D.8): 8,192 requests/s host-wide with round-robin fairness, beyond it `overloaded` and counted; journal-byte backpressure before acceptance against a 4 MiB/s complete-record budget — a report arriving while the budget is exhausted is admitted `coalesced` only if its `(execution, source)` already has a record or coalesced position in the current window, otherwise refused `overloaded`; a `queued` report is never downgraded or replaced afterwards. Queues are bounded (pending records ≤ 65,536 or 32 MiB, pending raw bytes ≤ 32 MiB, canonical buffer ≤ 32 MiB, signing scratch ≤ 1 MiB); scheduled batching (1 s window stretching to 4 s) with separate checkpoint accounting; retention 7 days or 20,000 events per execution behind a signed retention anchor; refusals aggregated per `(execution, reason, peer identity)` under the counter rules of the enforcement contract below. *proposed*
+- Enforcement contract (study §D.8, adopted in full as A12's initial contract; amendments are owned here, and the accounting items of §G stay open): the frozen §D.8 bounds, allocation inventories, saturation outcomes, retention and audit rules apply. The saturation outcomes are explicit:
+  - an oversize frame (over 16 KiB) closes the connection without applying anything;
+  - a ninth lifecycle source in an execution is acknowledged, counted and dropped;
+  - a 33rd metadata source is refused with `metadata_source_limit`;
+  - a third concurrent connection is closed with `busy`;
+  - a full queue refuses a new report with `overloaded` before acceptance; it is never accepted and downgraded later.
+  Per connection the parsed working set is at most 48 KiB beside the 16 KiB frame; per execution at most two raw requests and 32 KiB are in flight. Refusal, stale and coalesced outcomes are aggregated into one counter event per 60 s, at most 256 keys per execution per hour, then one overflow event; the counter allocation is bounded at 16 KiB. Acceptance traces (document checks, not a load test): a 257th distinct audit key in the hour goes to bounded overflow accounting; a report at a full queue is refused; the ninth-source, 33rd-source and third-connection cases each produce their declared outcome. *proposed*
+- Signing, memory, and descriptors are budgets and inventories, not measured results (study §D.8; accounting stays open per item 7 below): ordinary batches ≤ 1 receipt signature/s on average, exits add none (final records ride the next scheduled batch), checkpoint submissions ≤ 1 authentication signature per 64 s plus the keeper's own checkpoint signature from the keeper's budget — an average of ≤ 1.02 signatures/s with a two-signature burst when a batch and a checkpoint submission coincide; worst case ≤ 1.3 GiB (≈ 520 MiB steady) and ≈ 41,216 descriptors at 4,096 executions against `RLIMIT_NOFILE` 65,536, new connections refused `busy` within 10% of the limit. Conformance: the churn test plus the §D.7 kit — escaped-Unicode oversize, payload/canonicalization/position-coverage vectors, verifier rejection cases (duplicate position, overlapping gap, wrong gap count, conflicting duplicate), mixed-sender/truncated/missing-credential/`SCM_RIGHTS` fragments, and the Windows admission matrix. *proposed*
+- The launch plan carries `vendor_reports.transport: listener | inherited_fd | off`, negotiated as a per-launch capability under the exact-finalized-plan rule: the host applies the plan's selection and invents no other. Interim host default: `off`, with no automatic fallback; an unavailable or unsupported selection becomes `off` with a journaled reason, never a reason to reject a launch. The final default is pending Ivan: (a) a telemetry-only listener with explicit permission — compatible with stock senders but a listener in the agent's environment, in tension with the position that nothing listens near the agent (§A2); if Ivan picks (a), it is the single stated exception — or (b) an inherited channel with CLI-only senders — literally no listener, but unavailable on macOS and pending qualification on Windows, and supporting no existing sender as written. Both are recorded; neither is decided. *proposed (interim); final default pending Ivan*
+- The holder sets and actively strips the launch environment per the transport matrix (study §D.2): `listener` sets `HERDR_ENV=1`, `HERDR_PANE_ID`, `HERDR_WORKSPACE_ID`, `HERDR_TAB_ID`, `HERDR_BIN_PATH`, `HERDR_SOCKET_PATH` and removes any inherited `HERDR_CLIENT_SOCKET_PATH` and `ASR_VENDOR_REPORT_FD`; `inherited_fd` sets the same identity variables plus `ASR_VENDOR_REPORT_FD=<n>` and removes `HERDR_SOCKET_PATH` and `HERDR_CLIENT_SOCKET_PATH`, including values inherited from an outer herdr; `off` sets nothing and removes every `HERDR_*` variable and `ASR_VENDOR_REPORT_FD`. A launch nested under herdr therefore keeps no vendor-discoverable path to the outer control server. *proposed*
+- Endpoint placement follows the execution principal (study §D.2): a Unix listener lives in a per-execution directory under the host runtime root, owned by the host account with the execution principal's group (or an ACL for that principal), socket mode 0660; a Windows pipe carries a DACL granting the execution principal's SID read+write with the launch-integrity label. This is distinct from the control socket's 0700/0600 permissions in §6.1, which stay unchanged. *proposed*
+- Any future authority-bearing control façade is a separate authenticated endpoint behind the gate, never the vendor report path (study §D.10 stays conditional and separately gated). *proposed*
+- Open items from study §G, for the session-host specification (owner: the session-host module owner unless noted):
+  1. Entry schemas for genesis (host and execution), execution creation, and retention records, with signatures and chain positions.
+  2. Atomic commit ordering between journal append, allocation-watermark advance, and batch commit.
+  3. Retention of mixed-execution batches when retention anchors differ.
+  4. A signed fixture chain with roster and genesis context, a real predecessor, allocation-watermark history, and negative cases (with the roster keeper for roster context).
+  5. Linux membership assumptions: a host-controlled, non-migratable per-execution cgroup and the holder's `/proc` as the trusted view.
+  6. Short-lived CLI writers: whether fail-closed loss of a message whose sender exited before admission completes is acceptable.
+  7. Accounting for allocator overhead, kernel queues, transient descriptors, and every journal entry type.
+  8. Windows `inherited_fd` qualification (client-end creation, provenance, membership, impersonation, message-mode truncation, no exposed rendezvous); until then the combination is `off`.
+  9. The spare ancillary slot of the Linux receive contract: any exact sizing statement keeps it.
 
 ### A11. Open questions for Ivan and Alexey
 
@@ -380,6 +462,7 @@ Sources: the session-core study, [revision 4 in the wiki](https://github.com/rel
 10. **A-Q10. Cutover.** What are the exact post-conference cutover window, frozen accepted SHAs, and named forward-port owners? Who accepts board context/goal parity and rollback compatibility?
 11. **A-Q11. Restart gates.** Which auth/RC, cached-runtime, and mutable-state probes gate restart success? How do the accepted optimistic defaults map into versioned contracts without weakening independent admission?
 12. **A-Q12. Demo matrix and retirement.** What is the minimum demo OS/client matrix and available Windows/Muse qualification environment? When is legacy retirement considered, given board deprecation is undecided?
+13. **A-Q13. ACP as a generic adapter family.** Is one JSON-RPC adapter for OpenCode, Kimi, and other ACP agents in v1 scope, and which agents must it cover? *Not a position yet; open.*
 
 ### A11a. Dependency-question index (PR #8, PR #9, r6 gates)
 
@@ -390,7 +473,7 @@ This index completes the decision inventory. It asks for ownership and status, n
 | PR #8 topic | Owner | Status |
 | --- | --- | --- |
 | Probe and feed ownership, and policy placement | Module owner | Open; tracked on the PR #8 branch |
-| Lock, record, and retention | Module owner | Open; tracked on the PR #8 branch |
+| Lock, record, and retention | Module owner | Clearing rule closed by the PR #8 owner's position (see §A7); record and retention details stay tracked on the PR #8 branch |
 | Update-proposal and automatic-window configuration | Module owner | Open; tracked on the PR #8 branch |
 | Whole-cohort commit and rollback | Module owner | Deferred (explicitly out of v1) |
 | Independent executor | Module owner | Deferred (explicitly out of v1) |
@@ -412,6 +495,10 @@ New scope, mode, and migration questions from this review:
 | Coexistence, cutover, and rollback compatibility | A-Q1, A-Q10, §A1 |
 
 Technical-owner gates CF-Q1 (auxiliary projections) and CF-Q2 (reservation and SES slots) are defined in the hosted contract §3.3. They are owned by critical-fixes and the module owner. They stay visible here without becoming new operator policy choices.
+
+### R200 delta
+
+R200 (Ivan, 2026-10-05) adds the §A0 invariants, the vendor-contract support in §A12, and the inspiration-only rule in §A10; it changes the reuse statuses it supersedes (the HAPI licence-pending status and any selective-reuse candidacy are closed to inspiration only, marked historical above). It changes no other previously accepted statement in this section: hybrid (c) as our own core, the gate guarantee, and the adopted behavioral rows (our own designs inspired by the named sources) all stand.
 
 ---
 
@@ -628,6 +715,7 @@ Today one token controls everything, and every agent can read it (§2.8). The ta
 - The control socket is created inside a directory of mode 0700 that the host creates before it listens. The socket itself is mode 0600. This closes the window between `listen` and `chmod` of §2.8.
 - Every connection's peer credentials are checked: `getpeereid` or `LOCAL_PEERCRED` on macOS, `SO_PEERCRED` on Linux. A peer of another UID is refused.
 - The Darwin fallback path under `/tmp` gets the same private directory.
+- The vendor-report endpoint (§A12) extends this section: transport-bound process identity where the OS has it, membership against a host-controlled container, the execution principal, and the recorded assurance level. Endpoint placement follows the execution principal per §A12 (per-execution directory and socket mode 0660, or pipe DACL on the execution principal), distinct from the control socket's 0700/0600 above; the launch environment is set and stripped per the §A12 transport matrix. *proposed*
 
 ### 6.2 Capability tokens
 
